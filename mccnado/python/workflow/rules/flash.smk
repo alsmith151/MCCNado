@@ -3,9 +3,9 @@ rule flash:
         fq1="seqnado_output/trimmed/{sample}_1.fastq.gz",
         fq2="seqnado_output/trimmed/{sample}_2.fastq.gz",
     output:
-        flashed="seqnado_output/flashed/{sample}/{sample}.extendedFrags.fastq.gz",
-        pe1="seqnado_output/flashed/{sample}/{sample}.notCombined_1.fastq.gz",
-        pe2="seqnado_output/flashed/{sample}/{sample}.notCombined_2.fastq.gz",
+        flashed=temp("seqnado_output/flashed/{sample}/{sample}.extendedFrags.fastq.gz"),
+        pe1=temp("seqnado_output/flashed/{sample}/{sample}.notCombined_1.fastq.gz"),
+        pe2=temp("seqnado_output/flashed/{sample}/{sample}.notCombined_2.fastq.gz"),
         hist=temp(
             "seqnado_output/flashed/{sample}/{sample}.hist"
         ),
