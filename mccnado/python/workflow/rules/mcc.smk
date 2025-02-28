@@ -106,3 +106,7 @@ rule pileup_sentinel:
         """
         touch {output.sentinel}
         """
+
+
+ruleorder:
+    split_genomic_reads > index_bam
