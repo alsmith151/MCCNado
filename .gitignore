@@ -28,3 +28,13 @@ tests/test_data_v2/
 tests/test_dir
 tests/data/dmso_1_10_1.fastq.gz
 tests/data/dmso_1_10_2.fastq.gz
+tests/data/GRCh38_noalt_as/GRCh38_noalt_as.1.bt2
+tests/data/GRCh38_noalt_as/GRCh38_noalt_as.2.bt2
+tests/data/GRCh38_noalt_as/GRCh38_noalt_as.3.bt2
+tests/data/GRCh38_noalt_as/GRCh38_noalt_as.4.bt2
+tests/data/GRCh38_noalt_as/GRCh38_noalt_as.rev.1.bt2
+tests/data/GRCh38_noalt_as/GRCh38_noalt_as.rev.2.bt2
+tests/data/hg38.fa
+tests/data/hg38.fa.gz.fai
+tests/data/hg38.fa.gz.gzi
+tests/data/hg38.genome
