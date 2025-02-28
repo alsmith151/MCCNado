@@ -10,10 +10,10 @@ rule split_viewpoint_reads:
         "seqnado_output/logs/split_reads/{sample}.log",
     container: None
     run:
-        import logging
-        FORMAT = '%(levelname)s %(name)s %(asctime)-15s %(filename)s:%(lineno)d %(message)s'
-        logging.basicConfig(format=FORMAT)
-        logging.getLogger().setLevel(logging.INFO)
+        # import logging
+        # FORMAT = '%(levelname)s %(name)s %(asctime)-15s %(filename)s:%(lineno)d %(message)s'
+        # logging.basicConfig(format=FORMAT)
+        # logging.getLogger().setLevel(logging.INFO)
         from mcc import mcc        
         
         mcc.split_viewpoint_reads(input.bam, output.fq)
