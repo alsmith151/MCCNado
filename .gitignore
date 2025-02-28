@@ -23,3 +23,6 @@ mccnado/src/old/align.rs
 mccnado/src/old/viewpoint.rs
 mccnado/Cargo.lock
 .DS_Store
+tests/playground/
+tests/test_data_v2/
+tests/test_dir
