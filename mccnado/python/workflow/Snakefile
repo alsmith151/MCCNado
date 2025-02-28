@@ -55,7 +55,7 @@ rule all:
         # split=expand("seqnado_output/split_reads/{sample}/{sample}.viewpoints.fastq.gz", sample=samples),
         # bams=expand("seqnado_output/aligned/split_genomic_reads/{sample}/{viewpoint}.bam", viewpoint=viewpoints, sample=samples)
         # bws=expand("seqnado_output/bigwigs/deeptools/unscaled/{sample}/{viewpoint}.bigWig", viewpoint=viewpoints, sample=samples)
-        # pileup=expand("seqnado_output/pileup/sentinel/{sample}.sentinel", sample=samples),
+        pileup=expand("seqnado_output/pileup/sentinel/{sample}.sentinel", sample=samples),
         combined_pileup=lambda wc: expand("seqnado_output/bigwigs/deeptools/combined/combine_{viewpoint}.bigWig", viewpoint=redefine_viewpoints(samples))
 
 
