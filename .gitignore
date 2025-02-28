@@ -26,3 +26,5 @@ mccnado/Cargo.lock
 tests/playground/
 tests/test_data_v2/
 tests/test_dir
+tests/data/dmso_1_10_1.fastq.gz
+tests/data/dmso_1_10_2.fastq.gz
