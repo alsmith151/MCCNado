@@ -4621,3 +4621,7 @@ tests/data/GRCh38_noalt_as/GRCh38_noalt_as.3.bt2
 tests/data/GRCh38_noalt_as/GRCh38_noalt_as.4.bt2
 tests/data/GRCh38_noalt_as/GRCh38_noalt_as.rev.1.bt2
 tests/data/GRCh38_noalt_as/GRCh38_noalt_as.rev.2.bt2
+mccnado/Cargo.lock
+mccnado/src/old/align.rs
+mccnado/src/old/viewpoint.rs
+test_dedup.ipynb
