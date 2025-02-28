@@ -1,0 +1,65 @@
+####################
+# Hardcoded config #
+####################
+
+ASSAY = "mcc"
+SCALE_RESOURCES = float(os.environ.get("SCALE_RESOURCES", "1"))
+configfile: "config_mcc.yml"
+container: "library://asmith151/seqnado/seqnado_pipeline:latest"
+
+###########
+# Set up #
+##########
+
+import os
+import pathlib
+import sys
+import pandas as pd
+import pyranges as pr
+
+fastq_files = list(pathlib.Path('.').glob('*.fastq.gz'))
+samples = list(set(['_'.join(f.stem.removesuffix('.fastq').split('_')[:-1]) for f in fastq_files]))
+viewpoints = (pr.read_bed(config["viewpoints"])
+                .df
+                .assign(viewpoint_name=lambda df: df['Name'].astype(str) + '-' + df['Chromosome'].astype(str) + '-' + df['Start'].astype(str) + '-' + df['End'].astype(str))['viewpoint_name']
+                .tolist()
+)
+
+
+fastq_dir = pathlib.Path("seqnado_output/fastqs")
+fastq_dir.mkdir(exist_ok=True, parents=True)
+for fastq in fastq_files:
+    fastq_new = fastq_dir / fastq.name
+    if not fastq_new.exists():
+        fastq_new.symlink_to(fastq.resolve())
+    
+
+
+include: 'rules/filter.smk'
+include: "rules/align.smk"
+include: "rules/common.smk"
+include: "rules/flash.smk"
+include: "rules/mcc.smk"
+include: "rules/qc.smk"
+include: "rules/trim.smk"
+include: "rules/deduplicate.smk"
+include: "rules/pileup.smk"
+
+
+rule all:
+    input:
+        # split=expand("seqnado_output/split_reads/{sample}/{sample}.viewpoints.fastq.gz", sample=samples),
+        # bams=expand("seqnado_output/aligned/split_genomic_reads/{sample}/{viewpoint}.bam", viewpoint=viewpoints, sample=samples)
+        # bws=expand("seqnado_output/bigwigs/deeptools/unscaled/{sample}/{viewpoint}.bigWig", viewpoint=viewpoints, sample=samples)
+        pileup=expand("seqnado_output/pileup/sentinel/{sample}.sentinel", sample=samples),
+        combined_pileup=lambda wc: expand("seqnado_output/bigwigs/deeptools/combined/combine_{viewpoint}.bigWig", viewpoint=redefine_viewpoints(samples))
+
+
+
+
+
+
+
+
+
+
