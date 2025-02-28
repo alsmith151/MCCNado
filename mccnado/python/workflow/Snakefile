@@ -46,6 +46,10 @@ include: "rules/deduplicate.smk"
 include: "rules/pileup.smk"
 
 
+wildcard_constraints:
+    viewpoint="|".join(viewpoints)
+
+
 rule all:
     input:
         # split=expand("seqnado_output/split_reads/{sample}/{sample}.viewpoints.fastq.gz", sample=samples),
