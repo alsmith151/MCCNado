@@ -19,3 +19,7 @@ old/read_investigation.md
 old/test_splitter.ipynb
 old/test.txt
 test_mcc_pipeline/
+mccnado/src/old/align.rs
+mccnado/src/old/viewpoint.rs
+mccnado/Cargo.lock
+.DS_Store
