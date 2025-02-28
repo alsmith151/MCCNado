@@ -5,7 +5,7 @@ rule minimap2_to_viewpoints:
         fq="seqnado_output/flashed/{sample}/{sample}.extendedFrags.fastq.gz",
         viewpoints="seqnado_output/viewpoints.fa",
     output:
-        bam="seqnado_output/aligned/{sample}/{sample}.viewpoints.bam",
+        bam=temp("seqnado_output/aligned/{sample}/{sample}.viewpoints.bam"),
     threads: 4
     resources:
         mem="4GB",
@@ -47,8 +47,8 @@ rule realign_unmapped:
     input:
         bam="seqnado_output/aligned/raw/{sample}.bam",
     output:
-        bam="seqnado_output/aligned/realigned/{sample}.bam",
-        bai="seqnado_output/aligned/realigned/{sample}.bam.bai",
+        bam=temp("seqnado_output/aligned/realigned/{sample}.bam"),
+        bai=temp("seqnado_output/aligned/realigned/{sample}.bam.bai"),
     threads: config["samtools"]["threads"]
     resources:
         mem="500MB",
@@ -72,7 +72,7 @@ rule combine_aligned:
         bam1="seqnado_output/aligned/raw/{sample}.bam",
         bam2="seqnado_output/aligned/realigned/{sample}.bam",
     output:
-        bam="seqnado_output/aligned/combined/{sample}.bam",
+        bam=temp("seqnado_output/aligned/combined/{sample}.bam"),
     threads: config["samtools"]["threads"]
     resources:
         mem="500MB",
