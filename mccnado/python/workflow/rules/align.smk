@@ -9,6 +9,7 @@ rule minimap2_to_viewpoints:
     threads: 4
     resources:
         mem="4GB",
+    container: None
     log:
         "seqnado_output/logs/aligned/{sample}.log",
     shell:

@@ -17,6 +17,7 @@ rule flash:
     threads: 4
     resources:
         mem_mb=1000,
+    container: None #alternative == "docker://pegi3s/flash"
     log:
         "seqnado_output/logs/flash/{sample}.log",
     shell:
