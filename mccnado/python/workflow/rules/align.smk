@@ -75,7 +75,7 @@ rule combine_aligned:
         bam=temp("seqnado_output/aligned/combined/{sample}.bam"),
     threads: config["samtools"]["threads"]
     resources:
-        mem="2GB",
+        mem="4GB",
     log:
         "seqnado_output/logs/combine/{sample}.log",
     shell:
