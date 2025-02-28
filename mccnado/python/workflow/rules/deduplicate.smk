@@ -22,8 +22,8 @@ rule deduplicate_fastq_raw:
         fq1="seqnado_output/fastqs/{sample}_1.fastq.gz",
         fq2="seqnado_output/fastqs/{sample}_2.fastq.gz",
     output:
-        deduped1=temp("seqnado_output/deduped/{sample}/{sample}_1.fastq.gz"),
-        deduped2=temp("seqnado_output/deduped/{sample}/{sample}_2.fastq.gz"),
+        fq1=temp("seqnado_output/deduped/{sample}/{sample}_1.fastq.gz"),
+        fq2=temp("seqnado_output/deduped/{sample}/{sample}_2.fastq.gz"),
     threads: 1
     resources:
         mem="1GB",

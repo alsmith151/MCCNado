@@ -48,6 +48,7 @@ def define_inputs_for_pileup(wildcards, samples) -> List[str]:
 rule combine_pileups:
     input:
         bws=lambda wc: define_inputs_for_pileup(wc, samples),
+        sentinels=expand("seqnado_output/pileup/sentinel/{samples}.sentinel", samples=samples),
     output:
         bw="seqnado_output/bigwigs/deeptools/combined/combine_{viewpoint}.bigWig",
     log:
