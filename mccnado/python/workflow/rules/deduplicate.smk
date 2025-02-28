@@ -19,8 +19,8 @@ rule unzip:
 
 rule deduplicate_fastq_raw:
     input:
-        fq1="seqnado_output/fastqs/{sample}_1.fastq",
-        fq2="seqnado_output/fastqs/{sample}_2.fastq",
+        fq1="seqnado_output/fastqs/{sample}_1.fastq.gz",
+        fq2="seqnado_output/fastqs/{sample}_2.fastq.gz",
     output:
         deduped1=temp("seqnado_output/deduped/{sample}/{sample}_1.fastq.gz"),
         deduped2=temp("seqnado_output/deduped/{sample}/{sample}_2.fastq.gz"),
@@ -32,12 +32,23 @@ rule deduplicate_fastq_raw:
     run:
         from mcc import mcc
         import json
+        import pathlib
 
-        stats = mcc.deduplicate_fastq(str(input.fq1), output.deduped1, str(input.fq2), output.deduped2)
+        shell("gunzip -c {input[0]} > {output.fq1}")
+        shell("gunzip -c {input[1]} > {output.fq2}")
+
+        fq1 = pathlib.Path(input.fq1).stem
+        fq2 = pathlib.Path(input.fq2).stem
+
+
+        stats = mcc.deduplicate_fastq(str(fq1), output.deduped1, str(fq2), output.deduped2)
 
         with open(log[0], "w") as f:
             json.dump(stats, f)
 
+        
+        fq1.unlink()
+        fq2.unlink()
 
 
 # rule deduplicate_fastq_flashed:
