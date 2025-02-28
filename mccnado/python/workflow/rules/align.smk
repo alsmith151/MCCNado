@@ -51,7 +51,7 @@ rule realign_unmapped:
         bai=temp("seqnado_output/aligned/realigned/{sample}.bam.bai"),
     threads: config["samtools"]["threads"]
     resources:
-        mem="500MB",
+        mem="4GB",
     log:
         "seqnado_output/logs/realign/{sample}.log",
     params:
