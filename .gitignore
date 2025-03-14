@@ -39,3 +39,8 @@ tests/data/hg38.fa.gz.fai
 tests/data/hg38.fa.gz.gzi
 tests/data/hg38.genome
 tests/setup-test-data.ipynb
+*.cool
+*.mcool
+*.pairs*
+hg-temp/
+hg-data/
