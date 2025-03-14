@@ -226,8 +226,6 @@ impl MCCReadGroup {
 
         for reporter in reporters {
             let reporter_meta = SegmentMetadata::from_read_name(reporter.name());
-            let capture_meta = SegmentMetadata::from_read_name(capture.name());
-
             let reporter_segment =
                 SegmentType::from_viewpoint_position(reporter_meta.viewpoint_position());
             let reporter_strand = get_strand(reporter.flags().is_reverse_complemented());
