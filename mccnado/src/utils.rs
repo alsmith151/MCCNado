@@ -424,6 +424,15 @@ impl SegmentType {
             _ => panic!("Invalid segment type"),
         }
     }
+
+    pub fn from_viewpoint_position(viewpoint_position: ViewpointPosition) -> Self {
+        match viewpoint_position {
+            ViewpointPosition::START => SegmentType::RIGHT,
+            ViewpointPosition::END => SegmentType::LEFT,
+            ViewpointPosition::ALL => SegmentType::VIEWPOINT,
+            ViewpointPosition::NONE => panic!("Invalid viewpoint position"),
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
