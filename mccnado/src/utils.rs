@@ -14,22 +14,18 @@ use std::collections::HashMap;
 use noodles::core::{Position, Region};
 use noodles::{bam, sam};
 
-pub fn get_fastq_reader<P>(fname: P) -> Result<fastq::io::Reader<Box<dyn std::io::BufRead>>>
+pub fn get_fastq_reader<P>(fname: P) -> Result<fastq::Reader<Box<dyn std::io::BufRead>>>
 where
     P: AsRef<Path> + Clone,
 {
     let f = std::fs::File::open(fname.clone())?;
 
     let buffer: Box<dyn std::io::BufRead> = match fname.as_ref().extension() {
-        Some(ext) => {
-            if ext == "gz" {
-                let gz = flate2::read::GzDecoder::new(f);
-                Box::new(std::io::BufReader::new(gz))
-            } else {
-                Box::new(std::io::BufReader::new(f))
-            }
+        Some(ext) if ext == "gz" => {
+            let gz = flate2::read::MultiGzDecoder::new(f);
+            Box::new(std::io::BufReader::new(gz))
         }
-        None => Box::new(std::io::BufReader::new(f)),
+        _ => Box::new(std::io::BufReader::new(f)),
     };
 
     Ok(fastq::Reader::new(buffer))
@@ -422,6 +418,15 @@ impl SegmentType {
             "viewpoint" => SegmentType::VIEWPOINT,
             "right" => SegmentType::RIGHT,
             _ => panic!("Invalid segment type"),
+        }
+    }
+
+    pub fn from_viewpoint_position(viewpoint_position: ViewpointPosition) -> Self {
+        match viewpoint_position {
+            ViewpointPosition::START => SegmentType::RIGHT,
+            ViewpointPosition::END => SegmentType::LEFT,
+            ViewpointPosition::ALL => SegmentType::VIEWPOINT,
+            ViewpointPosition::NONE => panic!("Invalid viewpoint position"),
         }
     }
 }
