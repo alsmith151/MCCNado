@@ -44,3 +44,4 @@ tests/setup-test-data.ipynb
 *.pairs*
 hg-temp/
 hg-data/
+Cargo.lock
