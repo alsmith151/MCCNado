@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use bio::io::fasta::Sequence;
 use bio::utils;
 use bstr::ByteSlice;
@@ -6,14 +6,16 @@ use flate2;
 use itertools::{self, Itertools};
 use log::{info, warn};
 use noodles::fastq;
-use noodles::fastq::record::Definition;
+use noodles::sam::alignment::io::Write;
 use noodles::sam::alignment::record::cigar::op::Kind;
+use noodles::sam::alignment::record_buf::data::field::Value;
+use noodles::sam::alignment::record_buf::Cigar;
 use noodles::sam::header::record::value::map::header;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use serde::de;
 use std::collections::{HashMap, HashSet};
-use std::io::{BufRead, Write};
+use std::io::{BufRead};
 use std::path::{Path, PathBuf};
 
 use crate::utils::{FlashedStatus, SegmentMetadata, ViewpointPosition};
@@ -168,4 +170,76 @@ pub fn split_reads(bam: &str, output_directory: &str) -> Result<()> {
     }
 
     Ok(())
+}
+
+
+pub fn add_viewpoint_tag(
+    bam: &str,
+) -> Result<()> {
+
+
+    let mut bam = noodles::bam::io::reader::Builder::default().build_from_path(bam)?;
+    let header = bam.read_header()?;
+
+    let stdout = std::io::stdout().lock();
+    let mut writer = noodles::sam::io::Writer::new(stdout);
+    writer.write_header(&header)?;
+
+    let vp_tag = noodles::sam::alignment::record::data::field::Tag::new(b'V', b'P');
+
+    let mcc_groups = bam.records().into_iter().chunk_by(|r| match r {
+        Ok(record) => SegmentMetadata::from_read_name(record.name())
+            .parent_id()
+            .to_string(),
+        Err(_) => "UNKNOWN".to_string(),
+    });
+
+    for (_, reads) in mcc_groups.into_iter() {
+        let reads = reads.collect::<Result<Vec<_>, _>>()?;
+        let read_group = MCCReadGroup::new(reads, FlashedStatus::FLASHED);
+
+        if read_group.contains_viewpoint() && read_group.any_mapped() {
+            let read_group = read_group.filter_mapped();
+
+            for reporter in read_group.reporters() {
+                let viewpoint = SegmentMetadata::from_read_name(reporter.name())
+                    .viewpoint()
+                    .to_string();
+
+                let mut record_sam = noodles::sam::alignment::RecordBuf::try_from_alignment_record(&header, reporter)?;
+
+                // Add the viewpoint tag to the record
+                record_sam.data_mut().insert(vp_tag, Value::String(viewpoint.clone().into()));
+
+                // Add the read group tag to the record
+                record_sam.data_mut().insert(
+                    noodles::sam::alignment::record::data::field::Tag::READ_GROUP,
+                    Value::String(
+                        viewpoint.clone().into()
+                    )
+                );
+
+                writer.write_alignment_record(&header, &record_sam)?;
+
+
+
+
+            }
+        }
+    }
+
+
+
+
+
+
+
+    Ok(())
+
+
+
+
+
+
+
 }
