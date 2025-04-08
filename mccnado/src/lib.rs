@@ -86,6 +86,24 @@ fn split_genomic_reads(
     
 
 
+#[pyfunction]
+#[pyo3(signature = (bam))]
+fn add_viewpoint_tag(
+    bam: &str,
+) -> PyResult<()> {
+    let res = mcc_splitter::add_viewpoint_tag(bam);
+
+    match res {
+        Err(e) => {
+            log::error!("{}", e);
+            return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                e.to_string(),
+            ))
+        }
+        Ok(_) => return Ok(()),
+    }
+}
+
 
 
 /// Rust implementation of MCC code.
@@ -101,5 +119,6 @@ fn mcc(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(deduplicate_fastq, m)?)?;
     m.add_function(wrap_pyfunction!(split_viewpoint_reads, m)?)?;
     m.add_function(wrap_pyfunction!(split_genomic_reads, m)?)?;
+    m.add_function(wrap_pyfunction!(add_viewpoint_tag, m)?)?;
     Ok(())
 }
