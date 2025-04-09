@@ -23,7 +23,7 @@ tests = [
 ]
 
 [project.scripts]
-mcc = "cli:main"
+mccnado = "cli:main"
 
 [tool.maturin]
 python-source = "python"
