@@ -11,10 +11,20 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dynamic = ["version"]
+dependencies = [
+  "typer",
+]
+
+
+
 [project.optional-dependencies]
 tests = [
     "pytest",
 ]
+
+[project.scripts]
+mcc = "cli:main"
+
 [tool.maturin]
 python-source = "python"
 features = ["pyo3/extension-module"]
