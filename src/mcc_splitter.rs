@@ -1,6 +1,4 @@
-use anyhow::anyhow;
 use anyhow::{Context, Result};
-use bio::bio_types::strand::Strand;
 use bio::io::fasta::Sequence;
 use bio::utils;
 use bstr::ByteSlice;
@@ -8,127 +6,23 @@ use flate2;
 use itertools::{self, Itertools};
 use log::{info, warn};
 use noodles::fastq;
-use noodles::fastq::record::Definition;
+use noodles::sam::alignment::io::Write;
 use noodles::sam::alignment::record::cigar::op::Kind;
+use noodles::sam::alignment::record_buf::data::field::Value;
+use noodles::sam::alignment::record_buf::Cigar;
 use noodles::sam::header::record::value::map::header;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use serde::de;
 use std::collections::{HashMap, HashSet};
-use std::io::{BufRead, Write};
+use std::io::{BufRead};
 use std::path::{Path, PathBuf};
 
-use crate::utils::{FlashedStatus, SegmentMetadata, SegmentType, ViewpointPosition};
-
-/// Returns the strand type based on the reverse complement flag.
-fn get_strand(is_reverse: bool) -> bio::bio_types::strand::Strand {
-    if is_reverse {
-        bio::bio_types::strand::Strand::Reverse
-    } else {
-        bio::bio_types::strand::Strand::Forward
-    }
-}
-
-/// Returns the reference sequence ID as a Result to avoid unwrap().
-fn get_reference_id(read: &noodles::bam::Record) -> Result<usize> {
-    let id = read
-        .reference_sequence_id()
-        .ok_or_else(|| anyhow!("Missing reference sequence ID"))??;
-    Ok(id)
-}
-
-/// Determines ligation junction positions while ensuring no unwrap().
-fn get_ligation_positions(
-    reporter: &noodles::bam::Record,
-    capture: &noodles::bam::Record,
-    segment: SegmentType,
-    reporter_strand: bio::bio_types::strand::Strand,
-    capture_strand: bio::bio_types::strand::Strand,
-) -> Result<(usize, usize)> {
-    let reporter_start = reporter
-        .alignment_start()
-        .ok_or_else(|| anyhow!("Missing reporter alignment start"))??
-        .get();
-
-    let capture_start = capture
-        .alignment_start()
-        .ok_or_else(|| anyhow!("Missing capture alignment start"))??
-        .get();
-
-    let reporter_end = reporter_start + reporter.sequence().len();
-    let capture_end = capture_start + capture.sequence().len();
-
-    match (segment, reporter_strand, capture_strand) {
-        (SegmentType::LEFT, Strand::Forward, Strand::Forward) => Ok((reporter_end, capture_start)),
-        (SegmentType::LEFT, Strand::Reverse, Strand::Reverse) => Ok((reporter_start, capture_end)),
-        (SegmentType::LEFT, Strand::Forward, Strand::Reverse) => Ok((reporter_end, capture_end)),
-        (SegmentType::LEFT, Strand::Reverse, Strand::Forward) => {
-            Ok((reporter_start, capture_start))
-        }
-        (SegmentType::RIGHT, Strand::Forward, Strand::Forward) => Ok((reporter_start, capture_end)),
-        (SegmentType::RIGHT, Strand::Reverse, Strand::Reverse) => Ok((reporter_end, capture_start)),
-        (SegmentType::RIGHT, Strand::Forward, Strand::Reverse) => {
-            Ok((reporter_start, capture_start))
-        }
-        (SegmentType::RIGHT, Strand::Reverse, Strand::Forward) => Ok((reporter_end, capture_end)),
-        _ => Err(anyhow!(
-            "Could not determine ligation junctions for given strands"
-        )),
-    }
-}
+use crate::utils::{FlashedStatus, SegmentMetadata, ViewpointPosition};
 
 pub struct MCCReadGroup {
     reads: Vec<noodles::bam::record::Record>,
     flashed_status: FlashedStatus,
-}
-
-pub struct PairsRecord {
-    viewpoint_id: String,
-    read_id: String,
-    chr1: usize,
-    pos1: usize,
-    chr2: usize,
-    pos2: usize,
-    strand1: String,
-    strand2: String,
-}
-
-impl PairsRecord {
-    pub fn new(
-        viewpoint_id: String,
-        read_id: String,
-        chr1: usize,
-        pos1: usize,
-        chr2: usize,
-        pos2: usize,
-        strand1: String,
-        strand2: String,
-    ) -> Self {
-        // // Check that chromosome 1 occurs before chromosome 2 if not swap them
-        // let (chr1, pos1, strand1, chr2, pos2, strand2) = if chr1 > chr2 {
-        //     (chr2, pos2, strand2, chr1, pos1, strand1)
-        // } else {
-        //     (chr1, pos1, strand1, chr2, pos2, strand2)
-        // };
-
-        // // Check that pos1 is less than pos2 if not swap them
-        // let (pos1, strand1, pos2, strand2) = if pos1 > pos2 {
-        //     (pos2, strand2, pos1, strand1)
-        // } else {
-        //     (pos1, strand1, pos2, strand2)
-        // };
-
-        PairsRecord {
-            viewpoint_id,
-            read_id,
-            chr1,
-            pos1,
-            chr2,
-            pos2,
-            strand1,
-            strand2,
-        }
-    }
 }
 
 impl MCCReadGroup {
@@ -214,47 +108,6 @@ impl MCCReadGroup {
             self.flashed_status,
         )
     }
-
-    fn ligation_junctions(&self) -> Result<Vec<PairsRecord>> {
-        let reporters = self.reporters();
-        let captures = self.captures();
-        let capture = captures
-            .get(0)
-            .ok_or_else(|| anyhow!("No capture read found"))?;
-
-        let mut pairs = Vec::new();
-
-        for reporter in reporters {
-            let reporter_meta = SegmentMetadata::from_read_name(reporter.name());
-            let reporter_segment =
-                SegmentType::from_viewpoint_position(reporter_meta.viewpoint_position());
-            let reporter_strand = get_strand(reporter.flags().is_reverse_complemented());
-            let capture_strand = get_strand(capture.flags().is_reverse_complemented());
-
-            let (pos1, pos2) = get_ligation_positions(
-                &reporter,
-                &capture,
-                reporter_segment,
-                reporter_strand,
-                capture_strand,
-            )?;
-
-            let pairs_record = PairsRecord::new(
-                reporter_meta.viewpoint().to_string(),
-                reporter_meta.to_string(),
-                get_reference_id(&reporter)?,
-                pos1,
-                get_reference_id(capture)?,
-                pos2,
-                reporter_strand.to_string(),
-                capture_strand.to_string(),
-            );
-
-            pairs.push(pairs_record);
-        }
-
-        Ok(pairs)
-    }
 }
 
 impl std::fmt::Display for MCCReadGroup {
@@ -276,6 +129,7 @@ impl std::fmt::Debug for MCCReadGroup {
         self.fmt(f)
     }
 }
+
 
 pub fn split_reads(bam: &str, output_directory: &str) -> Result<()> {
     let mut bam = noodles::bam::io::reader::Builder::default().build_from_path(bam)?;
@@ -306,9 +160,7 @@ pub fn split_reads(bam: &str, output_directory: &str) -> Result<()> {
                     let mut writer = noodles::bam::io::writer::Builder::default()
                         .build_from_path(path)
                         .expect("Could not create BAM writer");
-                    writer
-                        .write_header(&header)
-                        .expect("Could not write header");
+                    writer.write_header(&header).expect("Could not write header");
                     writer
                 });
 
@@ -320,20 +172,24 @@ pub fn split_reads(bam: &str, output_directory: &str) -> Result<()> {
     Ok(())
 }
 
-pub fn identify_ligation_junctions(bam: &str, output_directory: &str) -> Result<()> {
+
+pub fn add_viewpoint_tag(
+    bam: &str,
+) -> Result<()> {
+
+
     let mut bam = noodles::bam::io::reader::Builder::default().build_from_path(bam)?;
     let header = bam.read_header()?;
-    let mut handles = HashMap::new();
 
-    let ref_id_to_chromosome = header
-        .reference_sequences()
-        .iter()
-        .enumerate()
-        .map(|(ii, (chrom_name, chrom_map))| {
-            let chrom_name = chrom_name.to_string();
-            (ii, chrom_name)
-        })
-        .collect::<HashMap<_, _>>();
+    let stdout = std::io::stdout().lock();
+    let mut writer = noodles::sam::io::Writer::new(stdout);
+    writer.write_header(&header)?;
+
+    // Viewpoint tag
+    let vp_tag = noodles::sam::alignment::record::data::field::Tag::new(b'V', b'P');
+
+    // OC tag -- oligo coordinate tag
+    let oc_tag = noodles::sam::alignment::record::data::field::Tag::new(b'O', b'C');
 
     let mcc_groups = bam.records().into_iter().chunk_by(|r| match r {
         Ok(record) => SegmentMetadata::from_read_name(record.name())
@@ -348,39 +204,49 @@ pub fn identify_ligation_junctions(bam: &str, output_directory: &str) -> Result<
 
         if read_group.contains_viewpoint() && read_group.any_mapped() {
             let read_group = read_group.filter_mapped();
-            let pairs = read_group.ligation_junctions()?;
 
-            for pair in pairs {
-                let handle = handles.entry(pair.viewpoint_id.clone()).or_insert_with(|| {
-                    let path =
-                        Path::new(output_directory).join(format!("{}.pairs", &pair.viewpoint_id));
-                    let file = std::fs::File::create(path).expect("Could not create file");
-                    let writer = std::io::BufWriter::new(file);
-                    writer
-                });
+            for reporter in read_group.reporters() {
+                let viewpoint = SegmentMetadata::from_read_name(reporter.name())
+                    .viewpoint()
+                    .to_string();
 
-                let chrom_1 = ref_id_to_chromosome
-                    .get(&pair.chr1)
-                    .ok_or_else(|| anyhow!("Failed to get chromosome name"))?;
-                let chrom_2 = ref_id_to_chromosome
-                    .get(&pair.chr2)
-                    .ok_or_else(|| anyhow!("Failed to get chromosome name"))?;
+                let mut record_sam = noodles::sam::alignment::RecordBuf::try_from_alignment_record(&header, reporter)?;
 
-                writeln!(
-                    handle,
-                    "{}\t{}\t{}\t{}\t{}\t{}\t{}",
-                    pair.read_id,
-                    chrom_1,
-                    pair.pos1,
-                    chrom_2,
-                    pair.pos2,
-                    pair.strand1,
-                    pair.strand2
-                )
-                .context("Could not write record")?;
+                // Add the OC tag to the record
+                record_sam.data_mut().insert(oc_tag, Value::String(viewpoint.clone().into()));
+                
+                // Add the VP tag to the record -- this is just the viewpoint name before the first "-"
+                let vp_name = viewpoint.split_once("-").context("Could not split viewpoint name")?.0;
+                record_sam.data_mut().insert(vp_tag, Value::String(vp_name.into()));
+                
+
+                // Add the read group tag to the record
+                record_sam.data_mut().insert(
+                    noodles::sam::alignment::record::data::field::Tag::READ_GROUP,
+                    Value::String(
+                        vp_name.into()
+                    )
+                );
+
+                writer.write_alignment_record(&header, &record_sam)?;
+
+
             }
         }
     }
 
+
+
+
+
+
+
     Ok(())
+
+
+
+
+
+
+
 }
