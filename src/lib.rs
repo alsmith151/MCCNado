@@ -122,6 +122,26 @@ fn annotate_bam(
     }
 }
 
+#[pyfunction]
+#[pyo3(signature = (bam, stats))]
+fn extract_ligation_stats(
+    bam: &str,
+    stats: &str,
+) -> PyResult<()> {
+    let res = stats::get_ligation_stats(bam, stats);
+
+    match res {
+        Err(e) => {
+            log::error!("{}", e);
+            return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                e.to_string(),
+            ))
+        }
+        Ok(_) => return Ok(()),
+    }
+}
+
+
 
 
 /// Rust implementation of MCC code.
@@ -146,5 +166,6 @@ fn mccnado(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(split_viewpoint_reads, m)?)?;
     m.add_function(wrap_pyfunction!(split_genomic_reads, m)?)?;
     m.add_function(wrap_pyfunction!(annotate_bam, m)?)?;
+    m.add_function(wrap_pyfunction!(extract_ligation_stats, m)?)?;
     Ok(())
 }
