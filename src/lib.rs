@@ -125,7 +125,7 @@ fn add_viewpoint_tag(
 
 /// Rust implementation of MCC code.
 #[pymodule]
-fn mcc(m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn mccnado(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     pyo3_log::init();    
     let ctrlc_handler = ctrlc::try_set_handler(move || {

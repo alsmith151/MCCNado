@@ -3,7 +3,7 @@ requires = ["maturin>=1.7,<2.0"]
 build-backend = "maturin"
 
 [project]
-name = "mcc"
+name = "mccnado"
 requires-python = ">=3.10"
 classifiers = [
     "Programming Language :: Rust",
@@ -23,7 +23,7 @@ tests = [
 ]
 
 [project.scripts]
-mcc = "cli:main"
+mccnado = "mccnado.cli:main"
 
 [tool.maturin]
 python-source = "python"
