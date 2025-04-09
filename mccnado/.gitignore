@@ -72,4 +72,4 @@ docs/_build/
 .python-version
 
 # Test directories
-test_mccnado/*
+test_*/*
