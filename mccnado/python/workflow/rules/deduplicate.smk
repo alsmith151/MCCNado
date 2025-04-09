@@ -34,21 +34,21 @@ rule deduplicate_fastq_raw:
         import json
         import pathlib
 
+        outdir = pathlib.Path(output.fq1).parent
 
-        fq1 = pathlib.Path(input.fq1).stem
-        fq2 = pathlib.Path(input.fq2).stem
+        fq1_decompressed = outdir / pathlib.Path(input.fq1).stem
+        fq2_decompressed = outdir / pathlib.Path(input.fq2).stem
 
-        shell(f"gunzip -c {input[0]} > {fq1}")
-        shell(f"gunzip -c {input[1]} > {fq2}")
+        shell(f"gunzip -c {input[0]} > {fq1_decompressed}")
+        shell(f"gunzip -c {input[1]} > {fq2_decompressed}")
 
-        stats = mcc.deduplicate_fastq(str(fq1), output.fq1, str(fq2), output.fq2)
+        stats = mcc.deduplicate_fastq(str(fq1_decompressed), output.fq1, str(fq2_decompressed), output.fq2)
 
         with open(log[0], "w") as f:
             json.dump(stats, f)
 
-        
-        pathlib.Path(fq1).unlink()
-        pathlib.Path(fq2).unlink()
+        fq1_decompressed.unlink()
+        fq2_decompressed.unlink()
 
 
 # rule deduplicate_fastq_flashed:
