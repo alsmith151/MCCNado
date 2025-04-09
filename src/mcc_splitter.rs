@@ -213,7 +213,8 @@ pub fn add_viewpoint_tag(
                 let mut record_sam = noodles::sam::alignment::RecordBuf::try_from_alignment_record(&header, reporter)?;
 
                 // Add the OC tag to the record
-                record_sam.data_mut().insert(oc_tag, Value::String(viewpoint.clone().into()));
+                let oligo_coordinate = viewpoint.split_once("-").context("Could not split viewpoint name")?.1;
+                record_sam.data_mut().insert(oc_tag, Value::String(oligo_coordinate.into()));
                 
                 // Add the VP tag to the record -- this is just the viewpoint name before the first "-"
                 let vp_name = viewpoint.split_once("-").context("Could not split viewpoint name")?.0;
