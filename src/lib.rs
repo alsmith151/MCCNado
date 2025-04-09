@@ -1,3 +1,4 @@
+use anyhow::Context;
 use pyo3::prelude::*;
 use log::info;
 
@@ -85,6 +86,22 @@ fn split_genomic_reads(
 }
     
 
+// #[pyfunction]
+// #[pyo3(signature = (bam, output_directory))]
+// fn identify_ligation_junctions(bam: &str, output_directory: &str) -> PyResult<()> {
+
+//     let res = mcc_splitter::identify_ligation_junctions(bam, output_directory);
+
+//     match res {
+//         Err(e) => {
+//             log::error!("{}", e);
+//             return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+//                 e.to_string(),
+//             ))
+//         }
+//         Ok(_) => return Ok(()),
+//     }
+// }
 
 #[pyfunction]
 #[pyo3(signature = (bam))]
@@ -111,10 +128,18 @@ fn add_viewpoint_tag(
 fn mcc(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     pyo3_log::init();    
-    let ctrlc_handle = ctrlc::try_set_handler(move || {
+    let ctrlc_handler = ctrlc::try_set_handler(move || {
         info!("Received SIGINT, exiting...");
         std::process::exit(0);
     });
+
+    match ctrlc_handler {
+        Ok(_) => (),
+        Err(e) => {
+            // if it errors then just ignore it
+            info!("Failed to set up SIGINT handler: {}", e);
+        }
+    }
 
     m.add_function(wrap_pyfunction!(deduplicate_fastq, m)?)?;
     m.add_function(wrap_pyfunction!(split_viewpoint_reads, m)?)?;
