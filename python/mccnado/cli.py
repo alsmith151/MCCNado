@@ -4,7 +4,7 @@ from typing import Optional, List, Literal, Union
 from typing_extensions import Annotated
 from enum import Enum
 
-from mcc import mcc
+import mccnado
 
 app = typer.Typer()
 
@@ -23,7 +23,7 @@ def add_viewpoint_tag(bam: pathlib.Path):
         raise ValueError(f"The file {bam} is not a BAM file.")
 
     # Add the viewpoint tag to the BAM file
-    mcc.add_viewpoint_tag(str(bam))
+    mccnado.annotate_bam(str(bam))
 
 @app.command()
 def split_viewpoint_reads():

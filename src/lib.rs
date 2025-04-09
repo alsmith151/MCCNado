@@ -6,6 +6,7 @@ mod fastq_deduplicate;
 mod read_splitter;
 mod mcc_splitter;
 mod utils;
+mod stats;
 
 
 
@@ -105,10 +106,10 @@ fn split_genomic_reads(
 
 #[pyfunction]
 #[pyo3(signature = (bam))]
-fn add_viewpoint_tag(
+fn annotate_bam(
     bam: &str,
 ) -> PyResult<()> {
-    let res = mcc_splitter::add_viewpoint_tag(bam);
+    let res = mcc_splitter::annotate_bam(bam);
 
     match res {
         Err(e) => {
@@ -144,6 +145,6 @@ fn mccnado(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(deduplicate_fastq, m)?)?;
     m.add_function(wrap_pyfunction!(split_viewpoint_reads, m)?)?;
     m.add_function(wrap_pyfunction!(split_genomic_reads, m)?)?;
-    m.add_function(wrap_pyfunction!(add_viewpoint_tag, m)?)?;
+    m.add_function(wrap_pyfunction!(annotate_bam, m)?)?;
     Ok(())
 }
