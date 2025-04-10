@@ -15,6 +15,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use serde::de;
 use std::collections::{HashMap, HashSet};
+use std::default;
 use std::io::{BufRead};
 use std::path::{Path, PathBuf};
 
@@ -173,7 +174,7 @@ pub fn split_reads(bam: &str, output_directory: &str) -> Result<()> {
 }
 
 
-pub fn add_viewpoint_tag(
+pub fn annotate_bam(
     bam: &str,
 ) -> Result<()> {
 
@@ -191,6 +192,10 @@ pub fn add_viewpoint_tag(
     // OC tag -- oligo coordinate tag
     let oc_tag = noodles::sam::alignment::record::data::field::Tag::new(b'O', b'C');
 
+    // Reporter tag
+    let reporter_tag = noodles::sam::alignment::record::data::field::Tag::new(b'R', b'T');
+
+
     let mcc_groups = bam.records().into_iter().chunk_by(|r| match r {
         Ok(record) => SegmentMetadata::from_read_name(record.name())
             .parent_id()
@@ -205,33 +210,71 @@ pub fn add_viewpoint_tag(
         if read_group.contains_viewpoint() && read_group.any_mapped() {
             let read_group = read_group.filter_mapped();
 
-            for reporter in read_group.reporters() {
-                let viewpoint = SegmentMetadata::from_read_name(reporter.name())
-                    .viewpoint()
-                    .to_string();
 
-                let mut record_sam = noodles::sam::alignment::RecordBuf::try_from_alignment_record(&header, reporter)?;
+            // Get the details of the viewpoint
+            let example_read = read_group.reads.get(0).context("No reads in read group")?;
+            let viewpoint = SegmentMetadata::from_read_name(example_read.name())
+                .viewpoint()
+                .to_string();
+
+            // Get the viewpoint name
+            let viewpoint_name = viewpoint.split_once("-").context("Could not split viewpoint name")?.0;
+
+            // Get the oligo coordinate from the read name
+            let oligo_coordinate = SegmentMetadata::from_read_name(example_read.name())
+                .oligo_coordinates()
+                .to_string();
+
+            // Write the capture reads to the output
+            for capture_read in read_group.captures() {
+                let mut record_sam = noodles::sam::alignment::RecordBuf::try_from_alignment_record(&header, capture_read)?;
+                
+                // Add the reporter tag to the record
+                record_sam.data_mut().insert(reporter_tag, Value::Int8(0));
 
                 // Add the OC tag to the record
-                record_sam.data_mut().insert(oc_tag, Value::String(viewpoint.clone().into()));
-                
+                record_sam.data_mut().insert(oc_tag, Value::String(oligo_coordinate.clone().into()));
                 // Add the VP tag to the record -- this is just the viewpoint name before the first "-"
-                let vp_name = viewpoint.split_once("-").context("Could not split viewpoint name")?.0;
-                record_sam.data_mut().insert(vp_tag, Value::String(vp_name.into()));
-                
-
+                record_sam.data_mut().insert(vp_tag, Value::String(viewpoint_name.into()));
                 // Add the read group tag to the record
                 record_sam.data_mut().insert(
                     noodles::sam::alignment::record::data::field::Tag::READ_GROUP,
                     Value::String(
-                        vp_name.into()
+                        viewpoint_name.into()
+                        
                     )
                 );
 
                 writer.write_alignment_record(&header, &record_sam)?;
-
-
             }
+
+            // Write the reporter reads to the output
+            for reporter in read_group.reporters(){
+                let mut record_sam = noodles::sam::alignment::RecordBuf::try_from_alignment_record(&header, reporter)?;
+
+
+                // Add the reporter tag to the record
+                record_sam.data_mut().insert(reporter_tag, Value::Int8(1));
+
+                // Add the OC tag to the record
+                record_sam.data_mut().insert(oc_tag, Value::String(oligo_coordinate.clone().into()));
+                
+                // Add the VP tag to the record -- this is just the viewpoint name before the first "-"
+                record_sam.data_mut().insert(vp_tag, Value::String(viewpoint_name.into()));
+                
+                // Add the read group tag to the record
+                record_sam.data_mut().insert(
+                    noodles::sam::alignment::record::data::field::Tag::READ_GROUP,
+                    Value::String(
+                        viewpoint_name.into()
+                        
+                    )
+                );
+
+                writer.write_alignment_record(&header, &record_sam)?;
+            }
+
+
         }
     }
 

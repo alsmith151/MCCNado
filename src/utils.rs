@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use bio::bio_types::annot::contig::Contig;
 use bio::bio_types::strand::ReqStrand;
 use bstr::ByteSlice;
@@ -504,6 +504,10 @@ impl SegmentMetadata {
 
     pub fn viewpoint(&self) -> &str {
         self.name.split("__").nth(1).unwrap()
+    }
+
+    pub fn oligo_coordinates(&self) -> &str {
+        self.viewpoint().split_once("-").context("No viewpoint coordinate").expect("Error splitting oligo coords").1
     }
 
     pub fn viewpoint_position(&self) -> ViewpointPosition {
