@@ -93,7 +93,14 @@ pub fn get_ligation_stats(bam: &str, output: &str) -> Result<()> {
                 } else {
                     true
                 }
-            }
+            },
+            Value::Int8(s) => {
+                if *s == 0 {
+                    false
+                } else {
+                    true
+                }
+            },
             _ => {
                 warn!("Invalid RT tag value: {:?}", is_reporter);
                 false
