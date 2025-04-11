@@ -510,6 +510,10 @@ impl SegmentMetadata {
         self.viewpoint().split_once("-").context("No viewpoint coordinate").expect("Error splitting oligo coords").1
     }
 
+    pub fn viewpoint_name(&self) -> &str {
+        self.viewpoint().split_once("-").context("No viewpoint coordinate").expect("Error splitting oligo coords").0
+    }
+
     pub fn viewpoint_position(&self) -> ViewpointPosition {
         ViewpointPosition::from_str(self.name.split("__").nth(2).unwrap())
     }
