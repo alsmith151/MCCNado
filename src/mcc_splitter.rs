@@ -13,14 +13,15 @@ use noodles::sam::alignment::record::data::field::Tag;
 use noodles::sam::alignment::record_buf::data::field::Value;
 use noodles::sam::alignment::record_buf::Cigar;
 use noodles::sam::header::record::value::map::header;
+use noodles::sam::header::record::value::{map::ReadGroup, Map};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use serde::de;
 use std::collections::{HashMap, HashSet};
 use std::default;
 use std::io::BufRead;
-use std::path::{Path, PathBuf};
 use std::io::Write; // Import the Write trait for writeln! macro
+use std::path::{Path, PathBuf};
 
 pub struct MCCReadGroup {
     reads: Vec<noodles::bam::record::Record>,
@@ -279,13 +280,19 @@ impl PairsRecord {
     }
 }
 
-pub fn annotate_bam(bam: &str) -> Result<()> {
+pub fn annotate_bam(bam: &str, out: &str) -> Result<()> {
     let mut bam = noodles::bam::io::reader::Builder::default().build_from_path(bam)?;
     let header = bam.read_header()?;
 
-    let stdout = std::io::stdout().lock();
-    let mut writer = noodles::sam::io::Writer::new(stdout);
+    let temp = PathBuf::from(out).with_extension("temp.bam");
+    if temp.exists() {
+        std::fs::remove_file(&temp).context("Could not remove existing file")?;
+    }
+    let mut writer = noodles::bam::io::writer::Builder::default().build_from_path(&temp)?;
     writer.write_header(&header)?;
+
+    // Store read groups in a hash set
+    let mut read_groups_set = HashSet::new();
 
     // Viewpoint tag
     let vp_tag = noodles::sam::alignment::record::data::field::Tag::new(b'V', b'P');
@@ -327,6 +334,8 @@ pub fn annotate_bam(bam: &str) -> Result<()> {
                 .oligo_coordinates()
                 .to_string();
 
+            read_groups_set.insert(viewpoint_name.to_string());
+
             // Write the capture reads to the output
             for capture_read in read_group.captures() {
                 let mut record_sam = noodles::sam::alignment::RecordBuf::try_from_alignment_record(
@@ -351,7 +360,11 @@ pub fn annotate_bam(bam: &str) -> Result<()> {
                     Value::String(viewpoint_name.into()),
                 );
 
-                noodles::sam::alignment::io::Write::write_alignment_record(&mut writer, &header, &record_sam)?;
+                noodles::sam::alignment::io::Write::write_alignment_record(
+                    &mut writer,
+                    &header,
+                    &record_sam,
+                )?;
             }
 
             // Write the reporter reads to the output
@@ -379,10 +392,38 @@ pub fn annotate_bam(bam: &str) -> Result<()> {
                     Value::String(viewpoint_name.into()),
                 );
 
-                noodles::sam::alignment::io::Write::write_alignment_record(&mut writer, &header, &record_sam)?;
+                noodles::sam::alignment::io::Write::write_alignment_record(
+                    &mut writer,
+                    &header,
+                    &record_sam,
+                )?;
             }
         }
     }
+
+    // Close the writer
+    writer.try_finish()?;
+
+    // Need to re-header the output file to include the read groups
+    let mut bam_in = noodles::bam::io::reader::Builder::default().build_from_path(&temp)?;
+    let mut header = bam_in.read_header()?;
+
+    for rg in read_groups_set {
+        let read_group = Map::<ReadGroup>::default();
+        header.read_groups_mut().insert(rg.into(), read_group);
+    }
+    let mut bam_out = noodles::bam::io::writer::Builder::default()
+        .build_from_path(out)
+        .context("Could not create output file")?;
+
+    bam_out.write_header(&header).context("Could not write header")?;
+
+    std::io::copy(bam_in.get_mut(), bam_out.get_mut())?;
+
+    // Remove the temporary file
+    std::fs::remove_file(&temp).context("Could not remove temporary file")?;
+    info!("Finished annotating BAM file");
+    info!("Output written to {}", out);
 
     Ok(())
 }
