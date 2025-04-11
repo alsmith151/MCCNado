@@ -68,11 +68,9 @@ fn split_viewpoint_reads(
 
 #[pyfunction]
 #[pyo3(signature = (bam, output_directory))]
-fn split_genomic_reads(
-    bam: &str,
-    output_directory: &str,
-) -> PyResult<()> {
-    let res = mcc_splitter::split_reads(bam, output_directory);
+fn identify_ligation_junctions(bam: &str, output_directory: &str) -> PyResult<()> {
+
+    let res = mcc_splitter::identify_ligation_junctions(bam, output_directory);
 
     match res {
         Err(e) => {
@@ -84,24 +82,6 @@ fn split_genomic_reads(
         Ok(_) => return Ok(()),
     }
 }
-    
-
-// #[pyfunction]
-// #[pyo3(signature = (bam, output_directory))]
-// fn identify_ligation_junctions(bam: &str, output_directory: &str) -> PyResult<()> {
-
-//     let res = mcc_splitter::identify_ligation_junctions(bam, output_directory);
-
-//     match res {
-//         Err(e) => {
-//             log::error!("{}", e);
-//             return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
-//                 e.to_string(),
-//             ))
-//         }
-//         Ok(_) => return Ok(()),
-//     }
-// }
 
 #[pyfunction]
 #[pyo3(signature = (bam))]
@@ -163,8 +143,8 @@ fn mccnado(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     m.add_function(wrap_pyfunction!(deduplicate_fastq, m)?)?;
     m.add_function(wrap_pyfunction!(split_viewpoint_reads, m)?)?;
-    m.add_function(wrap_pyfunction!(split_genomic_reads, m)?)?;
     m.add_function(wrap_pyfunction!(annotate_bam, m)?)?;
+    m.add_function(wrap_pyfunction!(identify_ligation_junctions, m)?)?;
     m.add_function(wrap_pyfunction!(extract_ligation_stats, m)?)?;
     Ok(())
 }

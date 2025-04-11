@@ -8,7 +8,6 @@ use flate2;
 use itertools::{self, Itertools};
 use log::{info, warn};
 use noodles::fastq;
-use noodles::sam::alignment::io::Write;
 use noodles::sam::alignment::record::cigar::op::Kind;
 use noodles::sam::alignment::record::data::field::Tag;
 use noodles::sam::alignment::record_buf::data::field::Value;
@@ -21,6 +20,7 @@ use std::collections::{HashMap, HashSet};
 use std::default;
 use std::io::BufRead;
 use std::path::{Path, PathBuf};
+use std::io::Write; // Import the Write trait for writeln! macro
 
 pub struct MCCReadGroup {
     reads: Vec<noodles::bam::record::Record>,
@@ -351,7 +351,7 @@ pub fn annotate_bam(bam: &str) -> Result<()> {
                     Value::String(viewpoint_name.into()),
                 );
 
-                writer.write_alignment_record(&header, &record_sam)?;
+                noodles::sam::alignment::io::Write::write_alignment_record(&mut writer, &header, &record_sam)?;
             }
 
             // Write the reporter reads to the output
@@ -379,7 +379,7 @@ pub fn annotate_bam(bam: &str) -> Result<()> {
                     Value::String(viewpoint_name.into()),
                 );
 
-                writer.write_alignment_record(&header, &record_sam)?;
+                noodles::sam::alignment::io::Write::write_alignment_record(&mut writer, &header, &record_sam)?;
             }
         }
     }
