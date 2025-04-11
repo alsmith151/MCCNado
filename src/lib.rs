@@ -9,7 +9,6 @@ mod utils;
 mod stats;
 
 
-
 /// Deduplicates a FASTQ or FASTQ pair.
 #[pyfunction]
 #[pyo3(signature = (fastq1, output1, fastq2=None, output2=None))]
