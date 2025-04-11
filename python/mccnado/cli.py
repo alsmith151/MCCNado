@@ -11,7 +11,7 @@ app = typer.Typer()
 
 
 @app.command()
-def annotate_bam_file(bam: pathlib.Path):
+def annotate_bam_file(bam: pathlib.Path, output: pathlib.Path):
     """
     Add a viewpoint tag to the BAM file.
     """
@@ -24,7 +24,7 @@ def annotate_bam_file(bam: pathlib.Path):
         raise ValueError(f"The file {bam} is not a BAM file.")
 
     # Add the viewpoint tag to the BAM file
-    mccnado.annotate_bam(str(bam))
+    mccnado.annotate_bam(str(bam), str(output))
 
 @app.command()
 def extract_ligation_stats(bam: pathlib.Path, stats: pathlib.Path):

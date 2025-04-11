@@ -84,11 +84,12 @@ fn identify_ligation_junctions(bam: &str, output_directory: &str) -> PyResult<()
 }
 
 #[pyfunction]
-#[pyo3(signature = (bam))]
+#[pyo3(signature = (bam, output))]
 fn annotate_bam(
     bam: &str,
+    output: &str,
 ) -> PyResult<()> {
-    let res = mcc_splitter::annotate_bam(bam);
+    let res = mcc_splitter::annotate_bam(bam, output);
 
     match res {
         Err(e) => {
