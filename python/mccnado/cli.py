@@ -3,6 +3,7 @@ import pathlib
 from typing import Optional, List, Literal, Union
 from typing_extensions import Annotated
 from enum import Enum
+from loguru import logger
 
 import mccnado
 
