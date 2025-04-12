@@ -80,7 +80,7 @@ def combine_ligation_junction_coolers(
         if not clr.exists():
             raise FileNotFoundError(f"The file {clr} does not exist.")
         # Check if the file is a Cooler file
-        if clr.suffix != ".cool":
+        if clr.suffix not in [".cool", ".mcool"]:
             raise ValueError(f"The file {clr} is not a Cooler file.")
 
     # Combine the Cooler files -- TODO: allow for names to be passed in
