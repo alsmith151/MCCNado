@@ -3,10 +3,10 @@ use pyo3::prelude::*;
 use log::info;
 
 mod fastq_deduplicate;
-mod read_splitter;
-mod mcc_splitter;
+mod viewpoint_read_splitter;
+mod mcc_data_handler;
 mod utils;
-mod stats;
+mod ligation_stats;
 
 
 /// Deduplicates a FASTQ or FASTQ pair.
@@ -51,8 +51,8 @@ fn split_viewpoint_reads(
     output: &str,
 ) -> PyResult<()> {
 
-    let splitter_options = read_splitter::ReadSplitterOptions::default();
-    let splitter = read_splitter::ReadSplitter::new(bam, splitter_options);
+    let splitter_options = viewpoint_read_splitter::ReadSplitterOptions::default();
+    let splitter = viewpoint_read_splitter::ReadSplitter::new(bam, splitter_options);
     let res = splitter.split_reads(output);
 
     match res {
@@ -70,7 +70,7 @@ fn split_viewpoint_reads(
 #[pyo3(signature = (bam, output_directory))]
 fn identify_ligation_junctions(bam: &str, output_directory: &str) -> PyResult<()> {
 
-    let res = mcc_splitter::identify_ligation_junctions(bam, output_directory);
+    let res = mcc_data_handler::identify_ligation_junctions(bam, output_directory);
 
     match res {
         Err(e) => {
@@ -89,7 +89,7 @@ fn annotate_bam(
     bam: &str,
     output: &str,
 ) -> PyResult<()> {
-    let res = mcc_splitter::annotate_bam(bam, output);
+    let res = mcc_data_handler::annotate_bam(bam, output);
 
     match res {
         Err(e) => {
@@ -108,7 +108,7 @@ fn extract_ligation_stats(
     bam: &str,
     stats: &str,
 ) -> PyResult<()> {
-    let res = stats::get_ligation_stats(bam, stats);
+    let res = ligation_stats::get_ligation_stats(bam, stats);
 
     match res {
         Err(e) => {
