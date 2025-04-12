@@ -64,6 +64,36 @@ def identify_ligation_junctions(
     mccnado.identify_ligation_junctions(str(bam), str(outdir))
 
 
+@app.command()
+def combine_ligation_junction_coolers(
+    clrs: List[pathlib.Path],
+    outfile: pathlib.Path,
+):
+    """
+    Combine ligation junctions from multiple Cooler formatted files into a single file.
+    """
+    from .storage import CoolerBinsLinker, CoolerMerger
+
+
+    # Check if the Cooler files exist
+    for clr in clrs:
+        if not clr.exists():
+            raise FileNotFoundError(f"The file {clr} does not exist.")
+        # Check if the file is a Cooler file
+        if clr.suffix != ".cool":
+            raise ValueError(f"The file {clr} is not a Cooler file.")
+
+    # Combine the Cooler files -- TODO: allow for names to be passed in
+    clr_merger = CoolerMerger(clrs, outfile) 
+    clr_merger.merge()
+    # Check if the output file exists
+    if not outfile.exists():
+        raise FileNotFoundError(f"The file {outfile} does not exist. Error merging files.")
+    # Link the bins in the Cooler file to save space
+    clr_bins_linker = CoolerBinsLinker(outfile)
+    clr_bins_linker.link_bins()
+    
+
 
 @app.command()
 def split_viewpoint_reads():
