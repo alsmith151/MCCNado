@@ -278,6 +278,19 @@ impl PairsRecord {
             strand2,
         }
     }
+
+
+    pub fn is_valid(&self, chrom1_length: usize, chrom2_length:usize) -> bool {
+        // Check that the positions are within the chromosome lengths
+        if self.pos1 > chrom1_length || self.pos2 > chrom2_length {
+            return false;
+        } else if self.pos1 == 0 || self.pos2 == 0 {
+            return false;
+        }
+        true
+    }
+
+
 }
 
 pub fn annotate_bam(bam: &str, out: &str) -> Result<()> {
@@ -433,6 +446,10 @@ pub fn identify_ligation_junctions(bam: &str, output_directory: &str) -> Result<
     let header = bam.read_header()?;
     let mut handles = HashMap::new();
 
+    // Will ideally depend on the bamnado package here. This is not published yet
+
+    // Reference ID to chromosome name mapping
+    // This is a temporary solution until we can use the bamnado BamStats structure
     let ref_id_to_chromosome = header
         .reference_sequences()
         .iter()
@@ -442,6 +459,18 @@ pub fn identify_ligation_junctions(bam: &str, output_directory: &str) -> Result<
             (ii, chrom_name)
         })
         .collect::<HashMap<_, _>>();
+
+    // Get Chromosome lengths
+    let chrom_lengths = header
+        .reference_sequences()
+        .iter()
+       .map(|(chrom_name, chrom_map)| {
+            let chrom_name = chrom_name.to_string();
+            let chrom_length = chrom_map.length().into();
+            (chrom_name, chrom_length)
+        })
+        .collect::<HashMap<_, _>>();
+   
 
     let mcc_groups = bam.records().into_iter().chunk_by(|r| match r {
         Ok(record) => SegmentMetadata::from_read_name(record.name())
@@ -473,6 +502,18 @@ pub fn identify_ligation_junctions(bam: &str, output_directory: &str) -> Result<
                 let chrom_2 = ref_id_to_chromosome
                     .get(&pair.chr2)
                     .ok_or_else(|| anyhow!("Failed to get chromosome name"))?;
+
+                // Check if the pair is valid
+                let chrom1_length = chrom_lengths
+                    .get(chrom_1)
+                    .ok_or_else(|| anyhow!("Chromosome 1 not found"))?;
+                let chrom2_length = chrom_lengths
+                    .get(chrom_2)
+                    .ok_or_else(|| anyhow!("Chromosome 2 not found"))?;
+
+                if !pair.is_valid(*chrom1_length, *chrom2_length) {
+                    continue;
+                }
 
                 writeln!(
                     handle,
