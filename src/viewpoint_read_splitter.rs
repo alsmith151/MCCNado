@@ -14,9 +14,10 @@ use serde::de;
 use std::collections::HashSet;
 use std::io::{BufRead, Write};
 use std::path::{Path, PathBuf};
+use bamnado::BamStats;
 
 use crate::utils::{
-    get_fastq_reader, get_fastq_writer, BamStats, FlashedStatus, ReadNumber, Segment,
+    get_fastq_reader, get_fastq_writer, FlashedStatus, ReadNumber, Segment,
     SegmentMetadata, Strand, ViewpointPosition, SegmentType, SegmentPositions,
 };
 
