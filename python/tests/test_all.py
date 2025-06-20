@@ -1,6 +1,3 @@
 import pytest
-import mcc
+import mccnado
 
-
-def test_sum_as_string():
-    assert mcc.sum_as_string(1, 1) == "2"
