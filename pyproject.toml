@@ -15,7 +15,7 @@ dependencies = [
   "typer",
   "loguru",
 ]
-description = "A description of your MCCNado package"
+description = "MCCNado: Rust-based tools for use in processing Micro-Capure-C data using SeqNado"
 readme = "README.md"
 license = {text = "GPL-3.0-or-later"}
 authors = [
