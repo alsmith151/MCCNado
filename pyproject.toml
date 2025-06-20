@@ -14,10 +14,18 @@ dynamic = ["version"]
 dependencies = [
   "typer",
   "loguru",
-  
 ]
-
-
+description = "A description of your MCCNado package"
+readme = "README.md"
+license = {text = "GPL-3.0-or-later"}
+authors = [
+  {name = "Alastair Smith", email = "alastair.smith@ndcls.ox.ac.uk"},
+]
+maintainers = [
+  {name = "Alastair Smith", email = "alastair.smith@ndcls.ox.ac.uk"},
+]
+homepage = "https://github.com/alsmith151/MCCNado"
+repository = "https://github.com/alsmith151/MCCNado"
 
 [project.optional-dependencies]
 tests = [
