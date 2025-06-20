@@ -1,3 +1,6 @@
 import pytest
-import mccnado
 
+
+
+def test_import():
+    import mccnado
