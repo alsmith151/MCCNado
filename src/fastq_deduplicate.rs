@@ -11,7 +11,7 @@ use pyo3::types::PyDict;
 use crate::utils::{get_fastq_reader, get_fastq_writer};
 
 
-#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone, IntoPyObject)]
 pub struct FastqDeduplicationStats {
     total_reads: u64,
     unique_reads: u64,
@@ -46,15 +46,15 @@ impl FastqDeduplicationStats {
     }
 }
 
-impl IntoPy<PyObject> for FastqDeduplicationStats {
-    fn into_py(self, py: Python) -> PyObject {
-        let dict = PyDict::new_bound(py);
-        dict.set_item("total_reads", self.total_reads).unwrap();
-        dict.set_item("unique_reads", self.unique_reads).unwrap();
-        dict.set_item("duplicate_reads", self.duplicate_reads).unwrap();
-        dict.into()
-    }
-}
+// impl IntoPy<PyObject> for FastqDeduplicationStats {
+//     fn into_py(self, py: Python) -> PyObject {
+//         let dict = PyDict::new_bound(py);
+//         dict.set_item("total_reads", self.total_reads).unwrap();
+//         dict.set_item("unique_reads", self.unique_reads).unwrap();
+//         dict.set_item("duplicate_reads", self.duplicate_reads).unwrap();
+//         dict.into()
+//     }
+// }
 
 
 struct FastqRecord {
@@ -89,8 +89,8 @@ pub struct DuplicateRemover<R>
 where
     R: std::io::BufRead,
 {
-    fastq1: fastq::Reader<R>,
-    fastq2: Option<fastq::Reader<R>>,
+    fastq1: noodles::fastq::io::Reader<R>,
+    fastq2: Option<noodles::fastq::io::Reader<R>>,
     seen: HashSet<u64>,
 }
 
@@ -98,7 +98,7 @@ impl<R> DuplicateRemover<R>
 where
     R: std::io::BufRead,
 {
-    fn new(fastq1: fastq::Reader<R>, fastq2: Option<fastq::Reader<R>>) -> Self {
+    fn new(fastq1: noodles::fastq::io::Reader<R>, fastq2: Option<noodles::fastq::io::Reader<R>>) -> Self {
         Self {
             fastq1,
             fastq2,
