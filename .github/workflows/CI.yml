@@ -18,6 +18,9 @@ on:
 permissions:
   contents: read
 
+env:
+  CARGO_TERM_COLOR: always
+
 jobs:
   linux:
     runs-on: ${{ matrix.platform.runner }}
@@ -34,6 +37,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: 3.x
+      - run: rustup toolchain install stable --profile minimal --no-self-update
+      - run: rustup target add ${{ matrix.platform.target }}-unknown-linux-gnu
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.platform.target }}
+          cache-targets: "true"
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
@@ -86,6 +95,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: 3.x
+      - run: rustup toolchain install stable --profile minimal --no-self-update
+      - run: rustup target add ${{ matrix.platform.target }}-apple-darwin
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.platform.target }}
+          cache-targets: "true"
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
@@ -106,10 +121,35 @@ jobs:
           pip install pytest
           pytest
 
+  test:
+    name: Run tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.x
+      - run: rustup toolchain install stable --profile minimal --no-self-update
+      - uses: Swatinem/rust-cache@v2
+      - name: Build wheel for testing
+        uses: PyO3/maturin-action@v1
+        with:
+          args: --release --out dist --find-interpreter
+      - name: Install and test
+        run: |
+          set -e
+          python3 -m venv .venv
+          source .venv/bin/activate
+          pip install mccnado --find-links dist --force-reinstall
+          pip install pytest
+          pytest
+
   sdist:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - run: rustup toolchain install stable --profile minimal --no-self-update
+      - uses: Swatinem/rust-cache@v2
       - name: Build sdist
         uses: PyO3/maturin-action@v1
         with:
@@ -125,7 +165,7 @@ jobs:
     name: Release
     runs-on: ubuntu-latest
     if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
-    needs: [linux, macos, sdist]
+    needs: [linux, macos, sdist, test]
     permissions:
       # Use to sign the release artifacts
       id-token: write
@@ -135,6 +175,10 @@ jobs:
       attestations: write
     steps:
       - uses: actions/download-artifact@v4
+      - run: rustup toolchain install stable --profile minimal --no-self-update
+      - uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v2
         with:
