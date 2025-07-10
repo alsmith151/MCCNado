@@ -4,3 +4,4 @@ profile_*
 Cargo.lock
 target/
 *.pyc
+*.so
