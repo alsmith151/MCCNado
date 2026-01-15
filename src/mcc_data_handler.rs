@@ -311,7 +311,7 @@ impl PairsRecord {
 }
 
 
-fn check_bam_sorted_by_queryname(header: &noodles::sam::Header) -> Result<()> {
+fn check_bam_sorted_by_queryname(_header: &noodles::sam::Header) -> Result<()> {
     // Check if BAM is sorted by queryname (required for chunk_by grouping to work correctly)
     // The sort order is typically stored in the @HD line with SO tag
     // For now, we'll just log a warning and trust the user provided sorted data
