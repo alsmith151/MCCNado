@@ -8,6 +8,7 @@ use noodles::fastq;
 use noodles::fastq::record::Definition;
 use noodles::sam::alignment::record::cigar::op::Kind;
 use noodles::sam::header::record::value::map::header;
+use noodles::sam::alignment::io::{Read as _, Write as _};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use serde::de;
@@ -21,17 +22,17 @@ use crate::utils::{
     SegmentMetadata, Strand, ViewpointPosition, SegmentType, SegmentPositions,
 };
 
-struct ViewpointRead<'a> {
-    viewpoint: &'a str,
-    read: noodles::bam::Record,
-    flashed_status: FlashedStatus,
-    minimum_segment_length: usize,
+pub struct ViewpointRead<'a> {
+    pub viewpoint: &'a str,
+    pub read: noodles::sam::alignment::RecordBuf,
+    pub flashed_status: FlashedStatus,
+    pub minimum_segment_length: usize,
 }
 
 impl<'a> ViewpointRead<'a> {
     fn new(
         viewpoint_name: &'a str,
-        read: noodles::bam::Record,
+        read: noodles::sam::alignment::RecordBuf,
         flashed_status: FlashedStatus,
         minimum_segment_length: usize,
     ) -> Self {
@@ -68,12 +69,7 @@ impl<'a> ViewpointRead<'a> {
         }
 
         match self.read.reference_sequence_id() {
-            Some(reference_sequence_id) => match reference_sequence_id {
-                Ok(rid) => Some(rid.to_string()),
-                Err(_) => {
-                    return None;
-                }
-            },
+            Some(rid) => Some(rid.to_string()),
             None => None,
         }
     }
@@ -91,103 +87,145 @@ impl<'a> ViewpointRead<'a> {
         }
     }
 
+    fn parse_segment_positions(&self) -> Option<SegmentPositions> {
+        let mut positions = SegmentPositions::default();
+        let mut current_segment = SegmentType::LEFT;
+        let mut offset = 0;
+
+        for op in self.read.cigar().as_ref().iter() {
+            let len = op.len();
+
+            match (op.kind(), current_segment) {
+                (Kind::SoftClip, SegmentType::LEFT) => {
+                    positions.set_left((offset, offset + len));
+                    offset += len;
+                }
+                (Kind::Match, SegmentType::LEFT) => {
+                    positions.set_viewpoint((offset, offset + len));
+                    current_segment = SegmentType::VIEWPOINT;
+                    offset += len;
+                }
+                (Kind::SoftClip, SegmentType::VIEWPOINT) => {
+                    positions.set_right((offset, offset + len));
+                    current_segment = SegmentType::RIGHT;
+                    offset += len;
+                }
+                (Kind::Insertion, _) => offset += len,
+                (Kind::Match, _) => {
+                    let seg_range = match current_segment {
+                        SegmentType::LEFT => &mut positions.left(),
+                        SegmentType::VIEWPOINT => &mut positions.viewpoint(),
+                        SegmentType::RIGHT => &mut positions.right(),
+                    };
+                    seg_range.1 += len;
+                }
+                _ => {}
+            }
+        }
+        Some(positions)
+    }
+
+    fn extract_segment(
+        &self,
+        segment_type: SegmentType,
+        range: (usize, usize),
+    ) -> Option<Segment<fastq::Record>> {
+        let (start, end) = range;
+        let seq_len = self.read.sequence().len();
+
+        if start >= end || start >= seq_len {
+            return None;
+        }
+
+        let actual_end = end.min(seq_len);
+        let len = actual_end - start;
+
+        if len < self.minimum_segment_length {
+            return None;
+        }
+
+        let sequence: Vec<u8> = self.read.sequence().as_ref()
+            .iter()
+            .skip(start)
+            .take(len)
+            .copied()
+            .collect();
+
+        let quality: Vec<u8> = self.read.quality_scores()
+            .as_ref()
+            .iter()
+            .skip(start)
+            .take(len)
+            .map(|&q| q + 33)
+            .collect();
+
+        let metadata = SegmentMetadata::from_parts(
+            self.name().ok()?.as_str(),
+            self.viewpoint,
+            ViewpointPosition::from_segment_type(segment_type),
+            self.read_number(),
+            self.flashed_status,
+        );
+
+        Some(Segment::<fastq::Record>::from_metadata(metadata, &sequence, &quality))
+    }
+
     fn segments(&self) -> Option<Result<Vec<Segment<fastq::Record>>>> {
         if !self.is_viewpoint_read() {
             return None;
         }
 
-        let mut segment_positions = SegmentPositions::default();
-
-        // Get the CIGAR string
-        let cigar = self.read.cigar();
-        let mut start = 0;
-        // let mut is_matched = false;
-
-        let mut current_segment = SegmentType::LEFT;
-
-        for op in cigar.iter() {
-            let op = match op {
-                Ok(op) => op,
-                Err(_) => return None,
-            };
-
-            // Until a match is found, we are in the left segment
-            // If bases have been soft-clipped, they are part of the left segment
-            // Deletions == no change in position, insertions increase position to end of insertion
-            // When a match is found, we are in the viewpoint segment
-            // Same rules apply for Insertions and Deletions
-            // When soft-clipped bases are found, we are in the right segment
-
-            if op.kind() == Kind::SoftClip && current_segment == SegmentType::LEFT {
-                segment_positions.set_left((start, start + op.len() as usize));
-                start += op.len() as usize;
-            } else if op.kind() == Kind::Match && current_segment == SegmentType::LEFT {
-                segment_positions.set_viewpoint((start, start + op.len() as usize));
-                current_segment = SegmentType::VIEWPOINT;
-                start += op.len() as usize;
-            } else if op.kind() == Kind::SoftClip && current_segment == SegmentType::VIEWPOINT {
-                segment_positions.set_right((start, start + op.len() as usize));
-                current_segment = SegmentType::RIGHT;
-                start += op.len() as usize;
-            } else if op.kind() == Kind::Insertion {
-                start += op.len() as usize;
-            } else if op.kind() == Kind::Match {
-                let seg = match current_segment {
-                    SegmentType::LEFT => &mut segment_positions.left(),
-                    SegmentType::VIEWPOINT => &mut segment_positions.viewpoint(),
-                    SegmentType::RIGHT => &mut segment_positions.right(),
-                };
-                seg.1 += op.len() as usize;
-            }
-        }
-
+        let positions = self.parse_segment_positions()?;
         let mut segments = Vec::new();
-        let sequence = self.read.sequence();
-        let quality_scores = self.read.quality_scores();
 
-        for (segment_type, positions) in segment_positions.into_iter() {
-            let (start, end) = positions;
-
-            let end = match end > sequence.len() {
-                true => {
-                    warn!(
-                        "Segment end is greater than sequence length for read {}",
-                        self.name().unwrap()
-                    );
-                    sequence.len()
-                }
-                false => end,
-            };
-
-            let sequence: Vec<u8> = sequence
-                .iter()
-                .enumerate()
-                .skip(start)
-                .take(end - start)
-                .map(|(i, b)| sequence.get(i).unwrap())
-                .collect();
-
-            let quality_scores: &[u8] = &quality_scores.as_ref()[start..end]
-                .iter()
-                .map(|&n| n + 33)
-                .collect::<Vec<u8>>();
-
-            let metadata = SegmentMetadata::from_parts(
-                self.name().unwrap().as_str(),
-                &self.viewpoint,
-                ViewpointPosition::from_segment_type(segment_type),
-                self.read_number(),
-                self.flashed_status,
-            );
-
-            if sequence.len() < self.minimum_segment_length {
-                continue;
-            } else {
-                segments.push(Segment::<fastq::Record>::from_metadata(metadata, &sequence, quality_scores));
+        for (seg_type, range) in positions {
+            if let Some(segment) = self.extract_segment(seg_type, range) {
+                segments.push(segment);
             }
         }
 
         Some(Ok(segments))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use noodles::bam;
+    use noodles::sam::alignment::record::cigar::Op;
+    use noodles::sam::alignment::record::cigar::op::Kind;
+
+    #[test]
+    fn test_parse_segment_positions() {
+        use noodles::sam::alignment::record_buf::{Sequence, Cigar};
+        use noodles::sam::alignment::RecordBuf;
+        use noodles::sam::alignment::record::cigar::Op;
+        use noodles::sam::alignment::record::cigar::op::Kind;
+
+        // Construct a read with: 10S (Left) 50M (Viewpoint) 20S (Right)
+        let cigar = Cigar::from(vec![
+            Op::new(Kind::SoftClip, 10),
+            Op::new(Kind::Match, 50),
+            Op::new(Kind::SoftClip, 20),
+        ]);
+        
+        let read = RecordBuf::builder()
+            .set_cigar(cigar)
+            .set_sequence(Sequence::from(vec![b'A'; 80]))
+            .build();
+            
+        let viewpoint_read = ViewpointRead {
+            viewpoint: "test-vp",
+            read,
+            flashed_status: FlashedStatus::FLASHED,
+            minimum_segment_length: 5,
+        };
+        
+        let positions = viewpoint_read.parse_segment_positions().unwrap();
+        
+        assert_eq!(positions.left(), (0, 10));
+        assert_eq!(positions.viewpoint(), (10, 60));
+        assert_eq!(positions.right(), (60, 80));
     }
 }
 
@@ -262,16 +300,18 @@ impl ReadSplitter {
 
         let mut counter = 0;
         for region in query_regions {
-            let mut records = reader.query(&header, &region).expect("Failed to query region");
-            while let Some(record) = records.next() {
+            let query = reader.query(&header, &region).expect("Failed to query region");
+            for result in query.records() {
+                let record = result.and_then(|r| noodles::bam::Record::try_from(r).map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e)))?;
                 counter += 1;
                 if counter % 100_000 == 0 {
                     info!("Processed {} reads", counter);
                 }
 
+                let record_buf = noodles::sam::alignment::RecordBuf::try_from_alignment_record(&header, &record)?;
                 let viewpoint_read = ViewpointRead::new(
                     region.name().to_str().unwrap(),
-                    record?,
+                    record_buf,
                     self.options.flashed_status,
                     self.options.minimum_segment_length,
                 );

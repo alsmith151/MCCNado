@@ -7,6 +7,7 @@ mod viewpoint_read_splitter;
 mod mcc_data_handler;
 mod utils;
 mod ligation_stats;
+mod bam_deduplicate;
 
 
 /// Deduplicates a FASTQ or FASTQ pair.
@@ -39,6 +40,26 @@ fn deduplicate_fastq(
             ))
         }
         Ok(_) => return Ok(res.unwrap()),
+    }
+}
+
+/// Deduplicates a BAM file based on segment coordinates.
+#[pyfunction]
+#[pyo3(signature = (bam, output))]
+fn deduplicate_bam(
+    bam: &str,
+    output: &str,
+) -> PyResult<bam_deduplicate::BamDeduplicationStats> {
+    let res = bam_deduplicate::deduplicate_bam(bam, output);
+
+    match res {
+        Err(e) => {
+            log::error!("{}", e);
+            return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                e.to_string(),
+            ))
+        }
+        Ok(stats) => Ok(stats),
     }
 }
 
@@ -143,9 +164,11 @@ fn mccnado(m: &Bound<'_, PyModule>) -> PyResult<()> {
     }
 
     m.add_function(wrap_pyfunction!(deduplicate_fastq, m)?)?;
+    m.add_function(wrap_pyfunction!(deduplicate_bam, m)?)?;
     m.add_function(wrap_pyfunction!(split_viewpoint_reads, m)?)?;
     m.add_function(wrap_pyfunction!(annotate_bam, m)?)?;
     m.add_function(wrap_pyfunction!(identify_ligation_junctions, m)?)?;
     m.add_function(wrap_pyfunction!(extract_ligation_stats, m)?)?;
+    m.add_class::<bam_deduplicate::BamDeduplicationStats>()?;
     Ok(())
 }
