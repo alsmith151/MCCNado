@@ -76,7 +76,7 @@ jobs:
         run: |
           set -e
           pip install mccnado --find-links dist --force-reinstall
-          pip install pytest
+          pip install pytest pysam
           pytest
 
   sdist:
