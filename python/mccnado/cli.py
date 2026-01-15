@@ -7,6 +7,19 @@ import mccnado
 app = typer.Typer()
 
 
+def check_bam_sorted_by_queryname(bam_path: str):
+    import pysam
+
+    with pysam.AlignmentFile(bam_path, "rb") as bam_file:
+        sorted_order = bam_file.header.get("HD", {}).get("SO")
+
+        if sorted_order != "queryname":
+            raise ValueError(
+                f"The BAM file {bam_path} must be sorted by queryname (read name), currently {sorted_order}. Please sort the BAM file accordingly."
+            )
+
+
+
 @app.command()
 def annotate_bam(bam: pathlib.Path, output: pathlib.Path):
     """
@@ -19,6 +32,9 @@ def annotate_bam(bam: pathlib.Path, output: pathlib.Path):
     # Check if the file is a BAM file
     if bam.suffix != ".bam":
         raise ValueError(f"The file {bam} is not a BAM file.")
+    
+    # Check that the bam files is queryname sorted
+    check_bam_sorted_by_queryname(str(bam))
 
     # Add the viewpoint tag to the BAM file
     mccnado.annotate_bam(str(bam), str(output))
@@ -55,6 +71,9 @@ def identify_ligation_junctions(bam: pathlib.Path, outdir: pathlib.Path):
     # Check if the output directory exists if not, create it
     if not outdir.exists():
         outdir.mkdir(parents=True)
+    
+    # Check that the bam files is queryname sorted
+    check_bam_sorted_by_queryname(str(bam))
 
     # Identify ligation junctions from the BAM file
     mccnado.identify_ligation_junctions(str(bam), str(outdir))
@@ -72,6 +91,9 @@ def deduplicate_bam(bam: pathlib.Path, output: pathlib.Path):
     # Check if the file is a BAM file
     if bam.suffix != ".bam":
         raise ValueError(f"The file {bam} is not a BAM file.")
+
+    # Check that the bam files is queryname sorted
+    check_bam_sorted_by_queryname(str(bam))
 
     # Deduplicate the BAM file
     stats = mccnado.deduplicate_bam(str(bam), str(output))

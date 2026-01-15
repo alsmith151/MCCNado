@@ -16,6 +16,7 @@ dependencies = [
   "loguru",
   "cooler",
   "h5py",
+  "pysam"
 ]
 description = "MCCNado: Rust-based tools for use in processing Micro-Capure-C data using SeqNado"
 readme = "README.md"
