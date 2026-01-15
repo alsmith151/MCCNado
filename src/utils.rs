@@ -1,6 +1,5 @@
 use anyhow::{Context, Result};
 use bstr::ByteSlice;
-use flate2;
 use noodles::fastq;
 use noodles::fastq::record::Definition;
 use std::path::Path;
@@ -51,16 +50,16 @@ where
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum FlashedStatus {
-    FLASHED = 1,
+    Flashed = 1,
     #[allow(dead_code)]
-    UNFLASHED = 0,
+    Unflashed = 0,
 }
 
 impl std::fmt::Display for FlashedStatus {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            FlashedStatus::FLASHED => write!(f, "1"),
-            FlashedStatus::UNFLASHED => write!(f, "0"),
+            FlashedStatus::Flashed => write!(f, "1"),
+            FlashedStatus::Unflashed => write!(f, "0"),
         }
     }
 }
@@ -69,8 +68,8 @@ impl FlashedStatus {
     #[allow(dead_code)]
     pub fn from_str(s: &str) -> Self {
         match s {
-            "1" => FlashedStatus::FLASHED,
-            "0" => FlashedStatus::UNFLASHED,
+            "1" => FlashedStatus::Flashed,
+            "0" => FlashedStatus::Unflashed,
             _ => panic!("Invalid flashed status"),
         }
     }
@@ -78,17 +77,17 @@ impl FlashedStatus {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum ReadNumber {
-    ONE = 1,
-    TWO = 2,
-    FLASHED = 3,
+    One = 1,
+    Two = 2,
+    Flashed = 3,
 }
 
 impl std::fmt::Display for ReadNumber {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            ReadNumber::ONE => write!(f, "1"),
-            ReadNumber::TWO => write!(f, "2"),
-            ReadNumber::FLASHED => write!(f, "3"),
+            ReadNumber::One => write!(f, "1"),
+            ReadNumber::Two => write!(f, "2"),
+            ReadNumber::Flashed => write!(f, "3"),
         }
     }
 }
@@ -97,8 +96,8 @@ impl ReadNumber {
     #[allow(dead_code)]
     fn from_str(s: &str) -> Self {
         match s {
-            "1" => ReadNumber::ONE,
-            "2" => ReadNumber::TWO,
+            "1" => ReadNumber::One,
+            "2" => ReadNumber::Two,
             _ => panic!("Invalid read number"),
         }
     }
@@ -106,15 +105,15 @@ impl ReadNumber {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Strand {
-    POSITIVE = 1,
-    NEGATIVE = -1,
+    Positive = 1,
+    Negative = -1,
 }
 
 impl std::fmt::Display for Strand {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            Strand::POSITIVE => write!(f, "1"),
-            Strand::NEGATIVE => write!(f, "-1"),
+            Strand::Positive => write!(f, "1"),
+            Strand::Negative => write!(f, "-1"),
         }
     }
 }
@@ -123,8 +122,8 @@ impl Strand {
     #[allow(dead_code)]
     fn from_str(s: &str) -> Self {
         match s {
-            "1" => Strand::POSITIVE,
-            "-1" => Strand::NEGATIVE,
+            "1" => Strand::Positive,
+            "-1" => Strand::Negative,
             _ => panic!("Invalid strand"),
         }
     }
@@ -132,17 +131,17 @@ impl Strand {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum SegmentType {
-    LEFT,
-    VIEWPOINT,
-    RIGHT,
+    Left,
+    Viewpoint,
+    Right,
 }
 
 impl std::fmt::Display for SegmentType {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            SegmentType::LEFT => write!(f, "left"),
-            SegmentType::VIEWPOINT => write!(f, "viewpoint"),
-            SegmentType::RIGHT => write!(f, "right"),
+            SegmentType::Left => write!(f, "left"),
+            SegmentType::Viewpoint => write!(f, "viewpoint"),
+            SegmentType::Right => write!(f, "right"),
         }
     }
 }
@@ -151,38 +150,38 @@ impl SegmentType {
     #[allow(dead_code)]
     fn from_str(s: &str) -> Self {
         match s {
-            "left" => SegmentType::LEFT,
-            "viewpoint" => SegmentType::VIEWPOINT,
-            "right" => SegmentType::RIGHT,
+            "left" => SegmentType::Left,
+            "viewpoint" => SegmentType::Viewpoint,
+            "right" => SegmentType::Right,
             _ => panic!("Invalid segment type"),
         }
     }
 
     pub fn from_viewpoint_position(viewpoint_position: ViewpointPosition) -> Self {
         match viewpoint_position {
-            ViewpointPosition::START => SegmentType::RIGHT,
-            ViewpointPosition::END => SegmentType::LEFT,
-            ViewpointPosition::ALL => SegmentType::VIEWPOINT,
-            ViewpointPosition::NONE => panic!("Invalid viewpoint position"),
+            ViewpointPosition::Start => SegmentType::Right,
+            ViewpointPosition::End => SegmentType::Left,
+            ViewpointPosition::All => SegmentType::Viewpoint,
+            ViewpointPosition::None => panic!("Invalid viewpoint position"),
         }
     }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum ViewpointPosition {
-    START = 5,
-    END = 3,
-    ALL = 1,
-    NONE = 0,
+    Start = 5,
+    End = 3,
+    All = 1,
+    None = 0,
 }
 
 impl std::fmt::Display for ViewpointPosition {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            ViewpointPosition::START => write!(f, "start"),
-            ViewpointPosition::END => write!(f, "end"),
-            ViewpointPosition::ALL => write!(f, "all"),
-            ViewpointPosition::NONE => write!(f, "none"),
+            ViewpointPosition::Start => write!(f, "start"),
+            ViewpointPosition::End => write!(f, "end"),
+            ViewpointPosition::All => write!(f, "all"),
+            ViewpointPosition::None => write!(f, "none"),
         }
     }
 }
@@ -190,10 +189,10 @@ impl std::fmt::Display for ViewpointPosition {
 impl ViewpointPosition {
     fn from_str(s: &str) -> Self {
         match s {
-            "start" => ViewpointPosition::START,
-            "end" => ViewpointPosition::END,
-            "all" => ViewpointPosition::ALL,
-            "none" => ViewpointPosition::NONE,
+            "start" => ViewpointPosition::Start,
+            "end" => ViewpointPosition::End,
+            "all" => ViewpointPosition::All,
+            "none" => ViewpointPosition::None,
             _ => panic!("Invalid viewpoint position"),
         }
     }
@@ -202,9 +201,9 @@ impl ViewpointPosition {
 impl ViewpointPosition {
     pub fn from_segment_type(segment_type: SegmentType) -> Self {
         match segment_type {
-            SegmentType::LEFT => ViewpointPosition::END,
-            SegmentType::VIEWPOINT => ViewpointPosition::ALL,
-            SegmentType::RIGHT => ViewpointPosition::START,
+            SegmentType::Left => ViewpointPosition::End,
+            SegmentType::Viewpoint => ViewpointPosition::All,
+            SegmentType::Right => ViewpointPosition::Start,
         }
     }
 }
@@ -412,15 +411,15 @@ impl Iterator for SegmentPositions {
     fn next(&mut self) -> Option<Self::Item> {
         if self.current_pos == 0 {
             self.current_pos += 1;
-            return Some((SegmentType::LEFT, self.left));
+            Some((SegmentType::Left, self.left))
         } else if self.current_pos == 1 {
             self.current_pos += 1;
-            return Some((SegmentType::VIEWPOINT, self.viewpoint));
+            Some((SegmentType::Viewpoint, self.viewpoint))
         } else if self.current_pos == 2 {
             self.current_pos += 1;
-            return Some((SegmentType::RIGHT, self.right));
+            Some((SegmentType::Right, self.right))
         } else {
-            return None;
+            None
         }
     }
 }

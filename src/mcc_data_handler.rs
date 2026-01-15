@@ -51,7 +51,7 @@ impl MCCReadGroup {
 
             let read_name = SegmentMetadata::new(read_name);
             // Fix: Capture is ONLY the viewpoint oligo itself (ALL)
-            matches!(read_name.viewpoint_position(), ViewpointPosition::ALL)
+            matches!(read_name.viewpoint_position(), ViewpointPosition::All)
         })
     }
 
@@ -82,7 +82,7 @@ impl MCCReadGroup {
 
             // Fix: Reporter is everything that is NOT the viewpoint oligo (ALL)
             // (e.g., START/RIGHT, END/LEFT, NONE)
-            let is_viewpoint = matches!(name.viewpoint_position(), ViewpointPosition::ALL);
+            let is_viewpoint = matches!(name.viewpoint_position(), ViewpointPosition::All);
 
             if is_mapped && !is_viewpoint && has_viewpoint_read {
                 reads.push(read);
@@ -95,7 +95,7 @@ impl MCCReadGroup {
     pub fn captures(&self) -> Vec<&noodles::sam::alignment::RecordBuf> {
         let mut viewpoint_reads = self.viewpoint_reads().collect::<Vec<_>>();
 
-        if viewpoint_reads.len() > 1 && self.flashed_status == FlashedStatus::FLASHED {
+        if viewpoint_reads.len() > 1 && self.flashed_status == FlashedStatus::Flashed {
             // If the viewpoint is flashed, we only expect one capture read per viewpoint read
             // If there are more than one, we need to filter out the one with the highest mapping quality
             viewpoint_reads.sort_by_key(|read| {
@@ -104,7 +104,7 @@ impl MCCReadGroup {
                     None => 0,
                 };
 
-                qual * -1
+                -qual
             });
             viewpoint_reads.truncate(1);
         }
@@ -123,7 +123,7 @@ impl MCCReadGroup {
         let reporters = self.reporters();
         let captures = self.captures();
         let capture = captures
-            .get(0)
+            .first()
             .ok_or_else(|| anyhow!("No capture read found"))?;
 
         let mut pairs = Vec::new();
@@ -136,8 +136,8 @@ impl MCCReadGroup {
             let capture_strand = get_strand(capture.flags().is_reverse_complemented());
 
             let (pos1, pos2) = get_ligation_positions(
-                &reporter,
-                &capture,
+                reporter,
+                capture,
                 reporter_segment,
                 reporter_strand,
                 capture_strand,
@@ -146,7 +146,7 @@ impl MCCReadGroup {
             let pairs_record = PairsRecord::new(
                 reporter_meta.viewpoint_name().to_string(),
                 reporter_meta.to_string(),
-                get_reference_id(&reporter)?,
+                get_reference_id(reporter)?,
                 pos1,
                 get_reference_id(capture)?,
                 pos2,
@@ -187,9 +187,9 @@ impl std::fmt::Debug for MCCReadGroup {
 /// Returns the strand type based on the reverse complement flag.
 fn get_strand(is_reverse: bool) -> Strand {
     if is_reverse {
-        Strand::NEGATIVE
+        Strand::Negative
     } else {
-        Strand::POSITIVE
+        Strand::Positive
     }
 }
 
@@ -223,26 +223,26 @@ fn get_ligation_positions(
     let capture_end = capture_start + capture.sequence().len();
 
     match (segment, reporter_strand, capture_strand) {
-        (SegmentType::LEFT, Strand::POSITIVE, Strand::POSITIVE) => {
+        (SegmentType::Left, Strand::Positive, Strand::Positive) => {
             Ok((reporter_end, capture_start))
         }
-        (SegmentType::LEFT, Strand::NEGATIVE, Strand::NEGATIVE) => {
+        (SegmentType::Left, Strand::Negative, Strand::Negative) => {
             Ok((reporter_start, capture_end))
         }
-        (SegmentType::LEFT, Strand::POSITIVE, Strand::NEGATIVE) => Ok((reporter_end, capture_end)),
-        (SegmentType::LEFT, Strand::NEGATIVE, Strand::POSITIVE) => {
+        (SegmentType::Left, Strand::Positive, Strand::Negative) => Ok((reporter_end, capture_end)),
+        (SegmentType::Left, Strand::Negative, Strand::Positive) => {
             Ok((reporter_start, capture_start))
         }
-        (SegmentType::RIGHT, Strand::POSITIVE, Strand::POSITIVE) => {
+        (SegmentType::Right, Strand::Positive, Strand::Positive) => {
             Ok((reporter_start, capture_end))
         }
-        (SegmentType::RIGHT, Strand::NEGATIVE, Strand::NEGATIVE) => {
+        (SegmentType::Right, Strand::Negative, Strand::Negative) => {
             Ok((reporter_end, capture_start))
         }
-        (SegmentType::RIGHT, Strand::POSITIVE, Strand::NEGATIVE) => {
+        (SegmentType::Right, Strand::Positive, Strand::Negative) => {
             Ok((reporter_start, capture_start))
         }
-        (SegmentType::RIGHT, Strand::NEGATIVE, Strand::POSITIVE) => Ok((reporter_end, capture_end)),
+        (SegmentType::Right, Strand::Negative, Strand::Positive) => Ok((reporter_end, capture_end)),
         _ => Err(anyhow!(
             "Could not determine ligation junctions for given strands"
         )),
@@ -261,6 +261,7 @@ pub struct PairsRecord {
 }
 
 impl PairsRecord {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         viewpoint_id: String,
         read_id: String,
@@ -299,9 +300,7 @@ impl PairsRecord {
 
     pub fn is_valid(&self, chrom1_length: usize, chrom2_length: usize) -> bool {
         // Check that the positions are within the chromosome lengths
-        if self.pos1 > chrom1_length || self.pos2 > chrom2_length {
-            return false;
-        } else if self.pos1 == 0 || self.pos2 == 0 {
+        if self.pos1 > chrom1_length || self.pos2 > chrom2_length || self.pos1 == 0 || self.pos2 == 0 {
             return false;
         }
         true
@@ -361,7 +360,7 @@ fn finalize_bam_with_read_groups(
     final_path: &str,
     read_groups: HashSet<String>,
 ) -> Result<()> {
-    let mut bam_in = noodles::bam::io::reader::Builder::default().build_from_path(temp_path)?;
+    let mut bam_in = noodles::bam::io::reader::Builder.build_from_path(temp_path)?;
     let mut header = bam_in.read_header()?;
 
     for rg in read_groups {
@@ -370,7 +369,7 @@ fn finalize_bam_with_read_groups(
             .insert(rg.into(), Map::<ReadGroup>::default());
     }
 
-    let mut bam_out = noodles::bam::io::writer::Builder::default()
+    let mut bam_out = noodles::bam::io::writer::Builder
         .build_from_path(final_path)
         .context("Could not create output file")?;
 
@@ -384,7 +383,7 @@ fn finalize_bam_with_read_groups(
 }
 
 pub fn annotate_bam(bam_path: &str, out_path: &str) -> Result<()> {
-    let mut reader = noodles::bam::io::reader::Builder::default().build_from_path(bam_path)?;
+    let mut reader = noodles::bam::io::reader::Builder.build_from_path(bam_path)?;
     let header = reader.read_header()?;
 
     let temp_path = PathBuf::from(out_path).with_extension("temp.bam");
@@ -392,13 +391,13 @@ pub fn annotate_bam(bam_path: &str, out_path: &str) -> Result<()> {
         std::fs::remove_file(&temp_path).context("Could not remove existing temporary file")?;
     }
 
-    let mut writer = noodles::bam::io::writer::Builder::default().build_from_path(&temp_path)?;
+    let mut writer = noodles::bam::io::writer::Builder.build_from_path(&temp_path)?;
     writer.write_header(&header)?;
 
     let tags = MccTags::new();
     let mut read_groups_set = HashSet::new();
 
-    let mcc_groups = reader.records().into_iter().chunk_by(|r| {
+    let mcc_groups = reader.records().chunk_by(|r| {
         r.as_ref()
             .map(|record| {
                 SegmentMetadata::from_read_name(record.name())
@@ -415,11 +414,11 @@ pub fn annotate_bam(bam_path: &str, out_path: &str) -> Result<()> {
             reads_buf
                 .push(noodles::sam::alignment::RecordBuf::try_from_alignment_record(&header, &r)?);
         }
-        let read_group = MCCReadGroup::new(reads_buf, FlashedStatus::FLASHED);
+        let read_group = MCCReadGroup::new(reads_buf, FlashedStatus::Flashed);
 
         if read_group.contains_viewpoint() && read_group.any_mapped() {
             let filtered_group = read_group.filter_mapped();
-            let first_read = filtered_group.reads.get(0).context("No reads in group")?;
+            let first_read = filtered_group.reads.first().context("No reads in group")?;
             let metadata = SegmentMetadata::from_read_name(first_read.name());
 
             let viewpoint_full = metadata.viewpoint();
@@ -510,13 +509,13 @@ fn write_pairs_record<W: Write>(
 }
 
 pub fn identify_ligation_junctions(bam_path: &str, output_directory: &str) -> Result<()> {
-    let mut reader = noodles::bam::io::reader::Builder::default().build_from_path(bam_path)?;
+    let mut reader = noodles::bam::io::reader::Builder.build_from_path(bam_path)?;
     let header = reader.read_header()?;
     let chrom_info = ChromosomeInfo::from_header(&header);
 
     let mut handles = HashMap::new();
 
-    let mcc_groups = reader.records().into_iter().chunk_by(|r| {
+    let mcc_groups = reader.records().chunk_by(|r| {
         r.as_ref()
             .map(|record| {
                 SegmentMetadata::from_read_name(record.name())
@@ -533,7 +532,7 @@ pub fn identify_ligation_junctions(bam_path: &str, output_directory: &str) -> Re
             reads_buf
                 .push(noodles::sam::alignment::RecordBuf::try_from_alignment_record(&header, &r)?);
         }
-        let read_group = MCCReadGroup::new(reads_buf, FlashedStatus::FLASHED);
+        let read_group = MCCReadGroup::new(reads_buf, FlashedStatus::Flashed);
 
         if read_group.contains_viewpoint() && read_group.any_mapped() {
             let filtered_group = read_group.filter_mapped();

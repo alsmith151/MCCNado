@@ -46,9 +46,9 @@ impl<'a> ViewpointRead<'a> {
     #[allow(dead_code)]
     fn strand(&self) -> Strand {
         if self.read.flags().is_reverse_complemented() {
-            Strand::NEGATIVE
+            Strand::Negative
         } else {
-            Strand::POSITIVE
+            Strand::Positive
         }
     }
 
@@ -58,20 +58,17 @@ impl<'a> ViewpointRead<'a> {
             return None;
         }
 
-        match self.read.reference_sequence_id() {
-            Some(rid) => Some(rid.to_string()),
-            None => None,
-        }
+        self.read.reference_sequence_id().map(|rid| rid.to_string())
     }
 
     fn read_number(&self) -> ReadNumber {
         match self.flashed_status {
-            FlashedStatus::FLASHED => ReadNumber::FLASHED,
-            FlashedStatus::UNFLASHED => {
+            FlashedStatus::Flashed => ReadNumber::Flashed,
+            FlashedStatus::Unflashed => {
                 if self.read.flags().is_first_segment() {
-                    ReadNumber::ONE
+                    ReadNumber::One
                 } else {
-                    ReadNumber::TWO
+                    ReadNumber::Two
                 }
             }
         }
@@ -79,33 +76,33 @@ impl<'a> ViewpointRead<'a> {
 
     fn parse_segment_positions(&self) -> Option<SegmentPositions> {
         let mut positions = SegmentPositions::default();
-        let mut current_segment = SegmentType::LEFT;
+        let mut current_segment = SegmentType::Left;
         let mut offset = 0;
 
         for op in self.read.cigar().as_ref().iter() {
             let len = op.len();
 
             match (op.kind(), current_segment) {
-                (Kind::SoftClip, SegmentType::LEFT) => {
+                (Kind::SoftClip, SegmentType::Left) => {
                     positions.set_left((offset, offset + len));
                     offset += len;
                 }
-                (Kind::Match, SegmentType::LEFT) => {
+                (Kind::Match, SegmentType::Left) => {
                     positions.set_viewpoint((offset, offset + len));
-                    current_segment = SegmentType::VIEWPOINT;
+                    current_segment = SegmentType::Viewpoint;
                     offset += len;
                 }
-                (Kind::SoftClip, SegmentType::VIEWPOINT) => {
+                (Kind::SoftClip, SegmentType::Viewpoint) => {
                     positions.set_right((offset, offset + len));
-                    current_segment = SegmentType::RIGHT;
+                    current_segment = SegmentType::Right;
                     offset += len;
                 }
                 (Kind::Insertion, _) => offset += len,
                 (Kind::Match, _) => {
                     let seg_range = match current_segment {
-                        SegmentType::LEFT => &mut positions.left(),
-                        SegmentType::VIEWPOINT => &mut positions.viewpoint(),
-                        SegmentType::RIGHT => &mut positions.right(),
+                        SegmentType::Left => &mut positions.left(),
+                        SegmentType::Viewpoint => &mut positions.viewpoint(),
+                        SegmentType::Right => &mut positions.right(),
                     };
                     seg_range.1 += len;
                 }
@@ -185,43 +182,7 @@ impl<'a> ViewpointRead<'a> {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
 
-    #[test]
-    fn test_parse_segment_positions() {
-        use noodles::sam::alignment::record::cigar::op::Kind;
-        use noodles::sam::alignment::record::cigar::Op;
-        use noodles::sam::alignment::record_buf::{Cigar, Sequence};
-        use noodles::sam::alignment::RecordBuf;
-
-        // Construct a read with: 10S (Left) 50M (Viewpoint) 20S (Right)
-        let cigar = Cigar::from(vec![
-            Op::new(Kind::SoftClip, 10),
-            Op::new(Kind::Match, 50),
-            Op::new(Kind::SoftClip, 20),
-        ]);
-
-        let read = RecordBuf::builder()
-            .set_cigar(cigar)
-            .set_sequence(Sequence::from(vec![b'A'; 80]))
-            .build();
-
-        let viewpoint_read = ViewpointRead {
-            viewpoint: "test-vp",
-            read,
-            flashed_status: FlashedStatus::FLASHED,
-            minimum_segment_length: 5,
-        };
-
-        let positions = viewpoint_read.parse_segment_positions().unwrap();
-
-        assert_eq!(positions.left(), (0, 10));
-        assert_eq!(positions.viewpoint(), (10, 60));
-        assert_eq!(positions.right(), (60, 80));
-    }
-}
 
 pub struct ReadSplitterOptions {
     flashed_status: FlashedStatus,
@@ -231,7 +192,7 @@ pub struct ReadSplitterOptions {
 impl Default for ReadSplitterOptions {
     fn default() -> Self {
         Self {
-            flashed_status: FlashedStatus::FLASHED,
+            flashed_status: FlashedStatus::Flashed,
             minimum_segment_length: 18,
         }
     }
@@ -299,10 +260,7 @@ impl ReadSplitter {
                 .query(&header, &region)
                 .expect("Failed to query region");
             for result in query.records() {
-                let record = result.and_then(|r| {
-                    noodles::bam::Record::try_from(r)
-                        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
-                })?;
+                let record = result?;
                 counter += 1;
                 if counter % 100_000 == 0 {
                     info!("Processed {} reads", counter);
@@ -327,5 +285,43 @@ impl ReadSplitter {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_segment_positions() {
+        use noodles::sam::alignment::record::cigar::op::Kind;
+        use noodles::sam::alignment::record::cigar::Op;
+        use noodles::sam::alignment::record_buf::{Cigar, Sequence};
+        use noodles::sam::alignment::RecordBuf;
+
+        // Construct a read with: 10S (Left) 50M (Viewpoint) 20S (Right)
+        let cigar = Cigar::from(vec![
+            Op::new(Kind::SoftClip, 10),
+            Op::new(Kind::Match, 50),
+            Op::new(Kind::SoftClip, 20),
+        ]);
+
+        let read = RecordBuf::builder()
+            .set_cigar(cigar)
+            .set_sequence(Sequence::from(vec![b'A'; 80]))
+            .build();
+
+        let viewpoint_read = ViewpointRead {
+            viewpoint: "test-vp",
+            read,
+            flashed_status: FlashedStatus::Flashed,
+            minimum_segment_length: 5,
+        };
+
+        let positions = viewpoint_read.parse_segment_positions().unwrap();
+
+        assert_eq!(positions.left(), (0, 10));
+        assert_eq!(positions.viewpoint(), (10, 60));
+        assert_eq!(positions.right(), (60, 80));
     }
 }

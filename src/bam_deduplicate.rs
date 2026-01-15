@@ -118,17 +118,17 @@ fn filter_output_reads(
 }
 
 pub fn deduplicate_bam(bam_path: &str, out_path: &str) -> Result<BamDeduplicationStats> {
-    let mut reader = noodles::bam::io::reader::Builder::default().build_from_path(bam_path)?;
+    let mut reader = noodles::bam::io::reader::Builder.build_from_path(bam_path)?;
     let header = reader.read_header()?;
 
-    let mut writer = noodles::bam::io::writer::Builder::default().build_from_path(out_path)?;
+    let mut writer = noodles::bam::io::writer::Builder.build_from_path(out_path)?;
     writer.write_header(&header)?;
 
     let mut stats = BamDeduplicationStats::new();
     // Pre-size with a reasonable guess to avoid early reallocations
     let mut seen_molecules = HashSet::with_capacity(100_000);
 
-    let mcc_groups = reader.records().into_iter().chunk_by(|r| {
+    let mcc_groups = reader.records().chunk_by(|r| {
         r.as_ref()
             .map(|record| {
                 SegmentMetadata::from_read_name(record.name())
@@ -206,7 +206,7 @@ mod tests {
             is_reverse: false,
         };
 
-        let mut coords = vec![c1, c2, c3];
+        let mut coords = [c1, c2, c3];
         coords.sort();
 
         assert_eq!(coords[0].chrom_id, 0);

@@ -32,11 +32,11 @@ fn deduplicate_fastq(
 
     match res {
         Err(e) => {
-            return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+            Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
                 e.to_string(),
             ))
         }
-        Ok(_) => return Ok(res.unwrap()),
+        Ok(_) => Ok(res.unwrap()),
     }
 }
 
@@ -49,9 +49,9 @@ fn deduplicate_bam(bam: &str, output: &str) -> PyResult<bam_deduplicate::BamDedu
     match res {
         Err(e) => {
             log::error!("{}", e);
-            return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+            Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
                 e.to_string(),
-            ));
+            ))
         }
         Ok(stats) => Ok(stats),
     }
@@ -67,11 +67,11 @@ fn split_viewpoint_reads(bam: &str, output: &str) -> PyResult<()> {
     match res {
         Err(e) => {
             log::error!("{}", e);
-            return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+            Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
                 e.to_string(),
-            ));
+            ))
         }
-        Ok(_) => return Ok(()),
+        Ok(_) => Ok(()),
     }
 }
 
@@ -83,11 +83,11 @@ fn identify_ligation_junctions(bam: &str, output_directory: &str) -> PyResult<()
     match res {
         Err(e) => {
             log::error!("{}", e);
-            return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+            Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
                 e.to_string(),
-            ));
+            ))
         }
-        Ok(_) => return Ok(()),
+        Ok(_) => Ok(()),
     }
 }
 
@@ -99,11 +99,11 @@ fn annotate_bam(bam: &str, output: &str) -> PyResult<()> {
     match res {
         Err(e) => {
             log::error!("{}", e);
-            return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+            Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
                 e.to_string(),
-            ));
+            ))
         }
-        Ok(_) => return Ok(()),
+        Ok(_) => Ok(()),
     }
 }
 
@@ -115,11 +115,11 @@ fn extract_ligation_stats(bam: &str, stats: &str) -> PyResult<()> {
     match res {
         Err(e) => {
             log::error!("{}", e);
-            return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+            Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
                 e.to_string(),
-            ));
+            ))
         }
-        Ok(_) => return Ok(()),
+        Ok(_) => Ok(()),
     }
 }
 

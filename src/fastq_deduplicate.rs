@@ -142,10 +142,10 @@ impl DuplicateRemover<Box<dyn std::io::BufRead>> {
                     .as_mut()
                     .expect("Paired-end requires two output files"),
             )?;
-            return Ok(stats);
+            Ok(stats)
         } else {
             let stats = self.deduplicate_single(&mut writer1)?;
-            return Ok(stats);
+            Ok(stats)
         }
     }
 
@@ -154,7 +154,7 @@ impl DuplicateRemover<Box<dyn std::io::BufRead>> {
         writer: &mut fastq::io::Writer<Box<dyn Write>>,
     ) -> Result<FastqDeduplicationStats> {
         let mut stats = FastqDeduplicationStats::new();
-        for (_ii, record) in self.fastq1.records().enumerate() {
+        for record in self.fastq1.records() {
             let record = record?;
             stats.increment_total();
 

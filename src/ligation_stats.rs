@@ -67,7 +67,7 @@ fn write_stats_json(output_path: &str, stats: &HashMap<String, LigationStats>) -
 }
 
 pub fn get_ligation_stats(bam_path: &str, output_path: &str) -> Result<()> {
-    let mut reader = noodles::bam::io::reader::Builder::default().build_from_path(bam_path)?;
+    let mut reader = noodles::bam::io::reader::Builder.build_from_path(bam_path)?;
     let header = reader.read_header()?;
     let mut ligation_stats: HashMap<String, LigationStats> = HashMap::new();
 
