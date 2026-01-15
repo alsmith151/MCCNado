@@ -44,8 +44,8 @@ jobs:
         shell: bash
         run: |
           set -e
-          pip install mccnado --find-links dist --force-reinstall
-          pip install pytest
+          pip install --no-index --find-links dist mccnado
+          pip install pytest pysam
           pytest
 
   macos:
@@ -75,7 +75,7 @@ jobs:
       - name: pytest
         run: |
           set -e
-          pip install mccnado --find-links dist --force-reinstall
+          pip install --no-index --find-links dist mccnado
           pip install pytest pysam
           pytest
 
