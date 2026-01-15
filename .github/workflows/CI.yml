@@ -45,7 +45,7 @@ jobs:
         run: |
           set -e
           pip install typer loguru pytest pysam
-          pip install --no-deps --find-links dist mccnado
+          pip install --no-index --no-deps dist/mccnado*.whl
           pytest
 
   macos:
@@ -76,7 +76,7 @@ jobs:
         run: |
           set -e
           pip install typer loguru pytest pysam
-          pip install --no-deps --find-links dist mccnado
+          pip install --no-index --no-deps dist/mccnado*.whl
           pytest
 
   sdist:
