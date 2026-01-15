@@ -44,8 +44,8 @@ jobs:
         shell: bash
         run: |
           set -e
-          pip install --find-links dist --prefer-binary mccnado
-          pip install pytest pysam
+          pip install typer loguru pytest pysam
+          pip install --no-deps --find-links dist mccnado
           pytest
 
   macos:
@@ -75,8 +75,8 @@ jobs:
       - name: pytest
         run: |
           set -e
-          pip install --find-links dist --prefer-binary mccnado
-          pip install pytest pysam
+          pip install typer loguru pytest pysam
+          pip install --no-deps --find-links dist mccnado
           pytest
 
   sdist:
