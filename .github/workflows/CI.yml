@@ -44,7 +44,7 @@ jobs:
         shell: bash
         run: |
           set -e
-          pip install --no-index --find-links dist mccnado
+          pip install --find-links dist --prefer-binary mccnado
           pip install pytest pysam
           pytest
 
@@ -75,7 +75,7 @@ jobs:
       - name: pytest
         run: |
           set -e
-          pip install --no-index --find-links dist mccnado
+          pip install --find-links dist --prefer-binary mccnado
           pip install pytest pysam
           pytest
 

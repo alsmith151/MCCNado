@@ -113,8 +113,58 @@ def combine_ligation_junction_coolers(
 
 
 @app.command()
-def split_viewpoint_reads():
-    pass
+def split_viewpoint_reads(bam: pathlib.Path, output: pathlib.Path):
+    """
+    Split reads containing viewpoint sequences into constituent segments.
+    """
+    # Check if the BAM file exists
+    if not bam.exists():
+        raise FileNotFoundError(f"The file {bam} does not exist.")
+    
+    # Check if the file is a BAM file
+    if bam.suffix != ".bam":
+        raise ValueError(f"The file {bam} is not a BAM file.")
+    
+    # Split viewpoint reads from the BAM file
+    mccnado.split_viewpoint_reads(str(bam), str(output))
+
+
+@app.command()
+def deduplicate_fastq(
+    fastq1: pathlib.Path,
+    output1: pathlib.Path,
+    fastq2: pathlib.Path = typer.Option(None, "--fastq2", help="Optional R2 FASTQ file"),
+    output2: pathlib.Path = typer.Option(None, "--output2", help="Optional output R2 FASTQ file"),
+):
+    """
+    Remove duplicate reads from FASTQ files.
+    """
+    # Check if the FASTQ files exist
+    if not fastq1.exists():
+        raise FileNotFoundError(f"The file {fastq1} does not exist.")
+    
+    # Validate file extensions
+    valid_extensions = [".fastq", ".fq", ".fastq.gz", ".fq.gz"]
+    if fastq1.suffix not in valid_extensions and not any(str(fastq1).endswith(ext) for ext in valid_extensions):
+        raise ValueError(f"The file {fastq1} does not appear to be a FASTQ file.")
+    
+    if fastq2 is not None:
+        if not fastq2.exists():
+            raise FileNotFoundError(f"The file {fastq2} does not exist.")
+        if output2 is None:
+            raise ValueError("output2 is required when fastq2 is provided")
+        
+        # Deduplicate paired-end FASTQ files
+        stats = mccnado.deduplicate_fastq(str(fastq1), str(output1), str(fastq2), str(output2))
+    else:
+        # Deduplicate single-end FASTQ file
+        stats = mccnado.deduplicate_fastq(str(fastq1), str(output1))
+    
+    # Print deduplication summary
+    print("Deduplication summary:")
+    print(f"  Total reads:     {stats.total_reads}")
+    print(f"  Unique reads:    {stats.unique_reads}")
+    print(f"  Duplicate reads: {stats.duplicate_reads}")
 
 
 def main():
