@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 from typing import List, Optional, Union, Callable
 
+
 class CoolerBinsLinker:
     def __init__(self, file_path):
         self.file_path = file_path
@@ -12,29 +13,34 @@ class CoolerBinsLinker:
         for key, item in group.items():
             if isinstance(item, h5py.Group):
                 # Check if this group is a 'resolutions' group
-                if key == 'resolutions':
+                if key == "resolutions":
                     # Iterate through the resolution groups (e.g., '100', '200', etc.)
                     for resolution_key, resolution_group in item.items():
-                        if 'bins' in resolution_group:
+                        if "bins" in resolution_group:
                             if self.first_bins_ref is None:
                                 # This is the first 'bins' dataset we've encountered
-                                self.first_bins_ref = resolution_group['bins']
+                                self.first_bins_ref = resolution_group["bins"]
                             else:
                                 # Create a hard link to the first 'bins' dataset
-                                del resolution_group['bins']
-                                resolution_group['bins'] = self.first_bins_ref
+                                del resolution_group["bins"]
+                                resolution_group["bins"] = self.first_bins_ref
                 else:
                     # Recursively process other subgroups
                     self._recursive_link_bins(item)
 
     def link_bins(self):
-        with h5py.File(self.file_path, 'r+') as hdf5_file:
+        with h5py.File(self.file_path, "r+") as hdf5_file:
             # Start the recursive linking process from the root group
             self._recursive_link_bins(hdf5_file)
 
 
 class CoolerMerger:
-    def __init__(self, source_paths: List[Union[str, Path]], target_path: Union[str, Path], group_namer: Optional[Callable[[str], str]] = None):
+    def __init__(
+        self,
+        source_paths: List[Union[str, Path]],
+        target_path: Union[str, Path],
+        group_namer: Optional[Callable[[str], str]] = None,
+    ):
         """
         :param source_paths: List of source HDF5 file paths.
         :param target_path: Path to the target HDF5 file.
@@ -49,11 +55,11 @@ class CoolerMerger:
         return Path(source_path).stem
 
     def merge(self):
-        with h5py.File(self.target_path, 'a') as tgt:
+        with h5py.File(self.target_path, "a") as tgt:
             for source_path in self.source_paths:
                 group_name = self.group_namer(source_path)
                 print(f"Merging '{source_path}' into group '{group_name}'...")
-                with h5py.File(source_path, 'r') as src:
+                with h5py.File(source_path, "r") as src:
                     if group_name in tgt:
                         tgt_group = tgt[group_name]
                     else:
@@ -79,4 +85,3 @@ class CoolerMerger:
     def _copy_attributes(self, src_obj, tgt_obj):
         for key, value in src_obj.attrs.items():
             tgt_obj.attrs[key] = value
-
