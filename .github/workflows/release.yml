@@ -30,6 +30,14 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Set version from tag
+        run: |
+          # Extract version from tag (e.g., v0.1.4 -> 0.1.4)
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          # Update Cargo.toml version
+          sed -i "s/^version = .*/version = \"$VERSION\"/" Cargo.toml
+
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
@@ -58,6 +66,14 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Set version from tag
+        run: |
+          # Extract version from tag (e.g., v0.1.4 -> 0.1.4)
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          # Update Cargo.toml version
+          sed -i '' "s/^version = .*/version = \"$VERSION\"/" Cargo.toml
+
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
@@ -83,6 +99,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+
+      - name: Set version from tag
+        run: |
+          # Extract version from tag (e.g., v0.1.4 -> 0.1.4)
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          # Update Cargo.toml version
+          sed -i "s/^version = .*/version = \"$VERSION\"/" Cargo.toml
 
       - name: Build sdist
         uses: PyO3/maturin-action@v1
