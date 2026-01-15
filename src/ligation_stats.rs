@@ -1,5 +1,4 @@
 use anyhow::{Context, Result};
-use itertools::Itertools;
 use noodles::sam::alignment::record::data::field::Tag;
 use noodles::sam::alignment::record_buf::data::field::Value;
 use serde::{Deserialize, Serialize};

@@ -1,24 +1,12 @@
 use anyhow::Result;
-use bamnado::BamStats;
-use bio::io::fasta::Sequence;
-use bio::utils;
 use bstr::ByteSlice;
-use flate2;
-use log::{info, warn};
+use log::info;
 use noodles::fastq;
-use noodles::fastq::record::Definition;
-use noodles::sam::alignment::io::{Read as _, Write as _};
 use noodles::sam::alignment::record::cigar::op::Kind;
-use noodles::sam::header::record::value::map::header;
-use pyo3::prelude::*;
-use pyo3::types::PyDict;
-use serde::de;
-use std::collections::HashSet;
-use std::io::{BufRead, Write};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use crate::utils::{
-    get_fastq_reader, get_fastq_writer, FlashedStatus, ReadNumber, Segment, SegmentMetadata,
+    get_fastq_writer, FlashedStatus, ReadNumber, Segment, SegmentMetadata,
     SegmentPositions, SegmentType, Strand, ViewpointPosition,
 };
 
@@ -55,6 +43,7 @@ impl<'a> ViewpointRead<'a> {
         !self.read.flags().is_unmapped()
     }
 
+    #[allow(dead_code)]
     fn strand(&self) -> Strand {
         if self.read.flags().is_reverse_complemented() {
             Strand::NEGATIVE
@@ -63,6 +52,7 @@ impl<'a> ViewpointRead<'a> {
         }
     }
 
+    #[allow(dead_code)]
     fn viewpoint(&self) -> Option<String> {
         if !self.is_viewpoint_read() {
             return None;
@@ -198,9 +188,6 @@ impl<'a> ViewpointRead<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use noodles::bam;
-    use noodles::sam::alignment::record::cigar::op::Kind;
-    use noodles::sam::alignment::record::cigar::Op;
 
     #[test]
     fn test_parse_segment_positions() {

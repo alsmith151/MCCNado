@@ -1,18 +1,11 @@
 use anyhow::{Context, Result};
-use bio::bio_types::annot::contig::Contig;
-use bio::bio_types::strand::ReqStrand;
 use bstr::ByteSlice;
 use flate2;
-use log::{debug, info, warn};
 use noodles::fastq;
 use noodles::fastq::record::Definition;
-use std::collections::HashMap;
-use std::io::{BufRead, Write};
 use std::path::Path;
-use std::path::PathBuf;
 
-use noodles::core::{Position, Region};
-use noodles::{bam, sam};
+use noodles::bam;
 
 pub fn get_fastq_reader<P>(
     fname: P,
@@ -59,6 +52,7 @@ where
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum FlashedStatus {
     FLASHED = 1,
+    #[allow(dead_code)]
     UNFLASHED = 0,
 }
 
@@ -72,6 +66,7 @@ impl std::fmt::Display for FlashedStatus {
 }
 
 impl FlashedStatus {
+    #[allow(dead_code)]
     pub fn from_str(s: &str) -> Self {
         match s {
             "1" => FlashedStatus::FLASHED,
@@ -99,6 +94,7 @@ impl std::fmt::Display for ReadNumber {
 }
 
 impl ReadNumber {
+    #[allow(dead_code)]
     fn from_str(s: &str) -> Self {
         match s {
             "1" => ReadNumber::ONE,
@@ -124,6 +120,7 @@ impl std::fmt::Display for Strand {
 }
 
 impl Strand {
+    #[allow(dead_code)]
     fn from_str(s: &str) -> Self {
         match s {
             "1" => Strand::POSITIVE,
@@ -151,6 +148,7 @@ impl std::fmt::Display for SegmentType {
 }
 
 impl SegmentType {
+    #[allow(dead_code)]
     fn from_str(s: &str) -> Self {
         match s {
             "left" => SegmentType::LEFT,
@@ -262,10 +260,12 @@ impl SegmentMetadata {
         ViewpointPosition::from_str(self.name.split("__").nth(2).unwrap())
     }
 
+    #[allow(dead_code)]
     pub fn read_number(&self) -> ReadNumber {
         ReadNumber::from_str(self.name.split("__").nth(3).unwrap())
     }
 
+    #[allow(dead_code)]
     pub fn flashed_status(&self) -> FlashedStatus {
         FlashedStatus::from_str(self.name.split("__").nth(4).unwrap())
     }
@@ -300,15 +300,18 @@ impl std::fmt::Debug for SegmentMetadata {
 
 #[derive(Clone, Debug)]
 pub struct Segment<R> {
+    #[allow(dead_code)]
     metadata: SegmentMetadata,
     record: R,
 }
 
 impl<R> Segment<R> {
+    #[allow(dead_code)]
     fn new(metadata: SegmentMetadata, record: R) -> Self {
         Self { metadata, record }
     }
 
+    #[allow(dead_code)]
     pub fn metadata(&self) -> &SegmentMetadata {
         &self.metadata
     }
@@ -331,6 +334,7 @@ impl Segment<fastq::Record> {
 }
 
 impl Segment<bam::Record> {
+    #[allow(dead_code)]
     pub fn from_metadata(metadata: SegmentMetadata, record: bam::Record) -> Self {
         Self { metadata, record }
     }
@@ -346,6 +350,7 @@ pub struct SegmentPositions {
 }
 
 impl SegmentPositions {
+    #[allow(dead_code)]
     fn new(viewpoint: (usize, usize), left: (usize, usize), right: (usize, usize)) -> Self {
         Self {
             viewpoint,
@@ -388,6 +393,7 @@ impl SegmentPositions {
         self.right = right;
     }
 
+    #[allow(dead_code)]
     pub fn set_positions(
         &mut self,
         viewpoint: (usize, usize),

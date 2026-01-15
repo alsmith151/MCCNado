@@ -2,7 +2,6 @@ use anyhow::Result;
 use bstr::ByteSlice;
 use noodles::fastq;
 use pyo3::prelude::*;
-use pyo3::types::PyDict;
 use std::collections::HashSet;
 use std::io::Write;
 use std::path::Path;
@@ -38,6 +37,7 @@ impl FastqDeduplicationStats {
         self.duplicate_reads += 1;
     }
 
+    #[allow(dead_code)]
     fn print(&self) {
         println!("Total reads: {}", self.total_reads);
         println!("Unique reads: {}", self.unique_reads);
@@ -135,7 +135,7 @@ impl DuplicateRemover<Box<dyn std::io::BufRead>> {
             None => None,
         };
 
-        if let Some(ref mut fastq2_reader) = self.fastq2 {
+        if let Some(ref mut _fastq2_reader) = self.fastq2 {
             let stats = self.deduplicate_paired(
                 &mut writer1,
                 writer2
@@ -154,7 +154,7 @@ impl DuplicateRemover<Box<dyn std::io::BufRead>> {
         writer: &mut fastq::io::Writer<Box<dyn Write>>,
     ) -> Result<FastqDeduplicationStats> {
         let mut stats = FastqDeduplicationStats::new();
-        for (ii, record) in self.fastq1.records().enumerate() {
+        for (_ii, record) in self.fastq1.records().enumerate() {
             let record = record?;
             stats.increment_total();
 

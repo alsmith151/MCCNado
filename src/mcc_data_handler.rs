@@ -2,7 +2,7 @@ use crate::utils::{FlashedStatus, SegmentMetadata, SegmentType, Strand, Viewpoin
 use anyhow::{anyhow, Context, Result};
 use bstr::ByteSlice;
 use itertools::Itertools;
-use log::{info, warn};
+use log::info;
 use noodles::sam::alignment::record::data::field::Tag;
 use noodles::sam::alignment::record_buf::data::field::Value;
 use noodles::sam::header::record::value::{map::ReadGroup, Map};
@@ -563,7 +563,7 @@ mod tests {
 
     #[test]
     fn test_chromosome_info_from_header() {
-        let mut header = noodles::sam::Header::builder()
+        let header = noodles::sam::Header::builder()
             .add_reference_sequence(
                 "chr1",
                 Map::<ReferenceSequence>::new(NonZeroUsize::new(1000).unwrap()),

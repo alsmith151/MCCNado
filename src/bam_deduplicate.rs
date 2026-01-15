@@ -1,16 +1,13 @@
-use anyhow::{anyhow, Context, Result};
+use anyhow::Result;
 use itertools::Itertools;
 use log::info;
-use noodles::sam;
 use noodles::sam::alignment::record::data::field::Tag;
 use pyo3::prelude::*;
 use std::collections::{HashMap, HashSet};
 use std::hash::Hasher;
-use std::path::Path;
 use twox_hash::XxHash64;
 
-use crate::mcc_data_handler::MCCReadGroup;
-use crate::utils::{FlashedStatus, SegmentMetadata};
+use crate::utils::SegmentMetadata;
 use noodles::sam::alignment::io::Write;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
@@ -187,7 +184,6 @@ pub fn deduplicate_bam(bam_path: &str, out_path: &str) -> Result<BamDeduplicatio
 #[cfg(test)]
 mod tests {
     use super::*;
-    use noodles::bam;
 
     #[test]
     fn test_segment_coord_sorting() {
