@@ -110,7 +110,7 @@ jobs:
       - name: Run tests
         run: |
           source .venv/bin/activate
-          pytest python/mccnado/tests
+          pytest python/tests
 
   build-dev:
     name: Build (dev)
