@@ -1,0 +1,13 @@
+target/
+.git/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+htmlcov/
+dist/
+build/
+.DS_Store
+.env
+Cargo.lock

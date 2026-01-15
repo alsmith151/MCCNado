@@ -38,65 +38,149 @@ pip install -e .
 
 ## Requirements
 
-- Python 3.7+
+- Python 3.10+
 - Rust (for building from source)
 - samtools (for BAM file processing)
 
+## Quick Start
+
+After installation, you can immediately use the `mccnado` command:
+
+```bash
+# Deduplicate a BAM file
+mccnado deduplicate-bam input.bam output.bam
+
+# View all available commands
+mccnado --help
+
+# Get help for a specific command
+mccnado deduplicate-bam --help
+```
+
 ## Usage
+
+### Tool Overview
+
+MCCNado provides several specialized tools for MCC data processing:
+
+#### 1. FASTQ Deduplication
+Removes duplicate reads from FASTQ files by comparing sequence content and quality scores. Useful for removing PCR duplicates before alignment.
+
+#### 2. BAM Deduplication
+Removes duplicate alignments from BAM files based on genomic coordinates and alignment information. Identifies and filters PCR duplicates that have the same mapping location.
+
+#### 3. Viewpoint Read Splitting
+Splits composite reads containing viewpoint sequences into separate segments for independent analysis. Useful when reads contain both viewpoint and flanking sequence information.
+
+#### 4. BAM Annotation
+Adds MCC-specific metadata tags to BAM files, including viewpoint information, oligo coordinates, and reporter tags for classification.
+
+#### 5. Ligation Statistics
+Analyzes chromatin ligation events and generates statistics on cis/trans interactions, helping characterize the quality and type of chromatin interactions in your data.
+
+#### 6. Ligation Junction Identification
+Identifies and extracts ligation junction sequences from BAM files, useful for validating chromatin interactions and analyzing junction characteristics.
 
 ### Python API
 
 ```python
 import mccnado
 
-# Deduplicate FASTQ files
+# 1. Deduplicate FASTQ files
+# Removes duplicate reads by comparing sequences
 stats = mccnado.deduplicate_fastq(
     fastq1="input_R1.fastq.gz",
     output1="output_R1.fastq.gz",
-    fastq2="input_R2.fastq.gz",  # Optional for paired-end
-    output2="output_R2.fastq.gz"  # Optional for paired-end
+    fastq2="input_R2.fastq.gz",      # Optional for paired-end
+    output2="output_R2.fastq.gz"     # Optional for paired-end
 )
+print(f"Total reads: {stats.total_reads}")
+print(f"Unique reads: {stats.unique_reads}")
+print(f"Duplicate reads: {stats.duplicate_reads}")
 
-print(f"Total reads: {stats['total_reads']}")
-print(f"Unique reads: {stats['unique_reads']}")
-print(f"Duplicate reads: {stats['duplicate_reads']}")
+# 2. Deduplicate BAM files
+# Removes PCR duplicates based on genomic coordinates
+bam_stats = mccnado.deduplicate_bam(
+    bam="aligned_reads.bam",
+    output="deduplicated.bam"
+)
+print(f"Unique molecules: {bam_stats.unique_molecules}")
+print(f"Duplicate molecules: {bam_stats.duplicate_molecules}")
 
-# Split viewpoint reads
+# 3. Split viewpoint reads
+# Separates composite reads into individual segments
 mccnado.split_viewpoint_reads(
     bam="aligned_reads.bam",
-    output="split_reads.fastq.gz"
+    output="split_reads.bam"
 )
 
-# Annotate BAM file with MCC metadata
+# 4. Annotate BAM file with MCC metadata
+# Adds VP (viewpoint), OC (oligo coordinates), and RT (reporter tag) tags
 mccnado.annotate_bam(
     bam="input.bam",
-    output_directory="annotated_output/"
+    output="annotated.bam"
 )
 
-# Extract ligation statistics
+# 5. Extract ligation statistics
+# Generates JSON report of cis/trans interactions and other statistics
 mccnado.extract_ligation_stats(
     bam="annotated.bam",
     stats="ligation_stats.json"
+)
+
+# 6. Identify ligation junctions
+# Extracts junction sequences and writes to output directory
+mccnado.identify_ligation_junctions(
+    bam="annotated.bam",
+    output_directory="junctions/"
 )
 ```
 
 ### Command Line Interface
 
-The package also provides a command-line interface through the Python module:
+MCCNado provides a clean, intuitive command-line interface accessible directly via the `mccnado` command after installation. The CLI uses command-line argument validation and provides helpful error messages.
+
+#### Available Commands
 
 ```bash
-# Deduplicate FASTQ files
-python -m mccnado.cli deduplicate input_R1.fastq.gz output_R1.fastq.gz
+# View all available commands and options
+mccnado --help
 
-# Split viewpoint reads
-python -m mccnado.cli split-reads aligned_reads.bam split_reads.fastq.gz
+# Deduplicate FASTQ files (single-end)
+mccnado deduplicate-fastq input.fastq.gz output.fastq.gz
 
-# Annotate BAM files
-python -m mccnado.cli annotate input.bam output_directory/
+# Deduplicate FASTQ files (paired-end)
+mccnado deduplicate-fastq input_R1.fastq.gz output_R1.fastq.gz \
+  --fastq2 input_R2.fastq.gz --output2 output_R2.fastq.gz
+
+# Remove PCR duplicates from BAM files
+mccnado deduplicate-bam aligned_reads.bam deduplicated.bam
+
+# Split reads containing viewpoint sequences
+mccnado split-viewpoint-reads aligned_reads.bam split_reads.bam
+
+# Annotate BAM files with MCC-specific metadata
+mccnado annotate-bam input.bam annotated.bam
 
 # Extract ligation statistics
-python -m mccnado.cli ligation-stats annotated.bam stats.json
+mccnado extract-ligation-stats annotated.bam stats.json
+
+# Identify ligation junctions
+mccnado identify-ligation-junctions annotated.bam junctions/
+
+# Get detailed help for any command
+mccnado deduplicate-bam --help
+mccnado deduplicate-fastq --help
 ```
+
+#### CLI Features
+
+- **Input Validation**: Automatically checks for file existence and correct file formats
+- **Clear Error Messages**: Informative error reporting when issues are encountered
+- **Summary Output**: Commands that deduplicate data display summary statistics
+- **Help System**: Use `--help` with any command for detailed usage information
+
+**Command Name Aliases**: Commands support both hyphenated and underscored formats (e.g., `deduplicate-bam` or `deduplicate_bam`)
 
 ## File Formats
 
