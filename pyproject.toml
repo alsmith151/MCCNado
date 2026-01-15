@@ -30,6 +30,7 @@ repository = "https://github.com/alsmith151/MCCNado"
 [project.optional-dependencies]
 tests = [
     "pytest",
+    "pysam",
 ]
 
 [project.scripts]
