@@ -47,7 +47,8 @@ impl MCCReadGroup {
             };
 
             let read_name = SegmentMetadata::new(read_name);
-            read_name.viewpoint_position() != ViewpointPosition::ALL
+            // Fix: Capture is ONLY the viewpoint oligo itself (ALL)
+            matches!(read_name.viewpoint_position(), ViewpointPosition::ALL)
         })
     }
 
@@ -75,10 +76,10 @@ impl MCCReadGroup {
         for read in &self.reads {
             let name = SegmentMetadata::from_read_name(read.name());
             let is_mapped = !read.flags().is_unmapped();
-            let is_viewpoint = match name.viewpoint_position() {
-                ViewpointPosition::ALL => true,
-                _ => false,
-            };
+            
+            // Fix: Reporter is everything that is NOT the viewpoint oligo (ALL)
+            // (e.g., START/RIGHT, END/LEFT, NONE)
+            let is_viewpoint = matches!(name.viewpoint_position(), ViewpointPosition::ALL);
 
             if is_mapped && !is_viewpoint && has_viewpoint_read {
                 reads.push(read);
