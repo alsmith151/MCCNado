@@ -6,8 +6,8 @@ use noodles::sam::alignment::record::cigar::op::Kind;
 use std::path::PathBuf;
 
 use crate::utils::{
-    get_fastq_writer, FlashedStatus, ReadNumber, Segment, SegmentMetadata,
-    SegmentPositions, SegmentType, Strand, ViewpointPosition,
+    get_fastq_writer, FlashedStatus, ReadNumber, Segment, SegmentMetadata, SegmentPositions,
+    SegmentType, Strand, ViewpointPosition,
 };
 
 pub struct ViewpointRead<'a> {
@@ -181,8 +181,6 @@ impl<'a> ViewpointRead<'a> {
         Some(Ok(segments))
     }
 }
-
-
 
 pub struct ReadSplitterOptions {
     flashed_status: FlashedStatus,

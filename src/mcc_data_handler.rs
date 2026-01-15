@@ -300,7 +300,11 @@ impl PairsRecord {
 
     pub fn is_valid(&self, chrom1_length: usize, chrom2_length: usize) -> bool {
         // Check that the positions are within the chromosome lengths
-        if self.pos1 > chrom1_length || self.pos2 > chrom2_length || self.pos1 == 0 || self.pos2 == 0 {
+        if self.pos1 > chrom1_length
+            || self.pos2 > chrom2_length
+            || self.pos1 == 0
+            || self.pos2 == 0
+        {
             return false;
         }
         true

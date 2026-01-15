@@ -31,11 +31,9 @@ fn deduplicate_fastq(
     let res = deduplicator.deduplicate(output1, output2);
 
     match res {
-        Err(e) => {
-            Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
-                e.to_string(),
-            ))
-        }
+        Err(e) => Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+            e.to_string(),
+        )),
         Ok(_) => Ok(res.unwrap()),
     }
 }
