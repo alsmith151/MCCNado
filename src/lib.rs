@@ -1,14 +1,13 @@
 use anyhow::Context;
-use pyo3::prelude::*;
 use log::info;
+use pyo3::prelude::*;
 
+mod bam_deduplicate;
 mod fastq_deduplicate;
-mod viewpoint_read_splitter;
+mod ligation_stats;
 mod mcc_data_handler;
 mod utils;
-mod ligation_stats;
-mod bam_deduplicate;
-
+mod viewpoint_read_splitter;
 
 /// Deduplicates a FASTQ or FASTQ pair.
 #[pyfunction]
@@ -20,7 +19,6 @@ fn deduplicate_fastq(
     fastq2: Option<&str>,
     output2: Option<&str>,
 ) -> PyResult<fastq_deduplicate::FastqDeduplicationStats> {
-    
     let deduplicator = fastq_deduplicate::DuplicateRemover::from_fastq_paths(fastq1, fastq2);
     let mut deduplicator = match deduplicator {
         Err(e) => {
@@ -46,10 +44,7 @@ fn deduplicate_fastq(
 /// Deduplicates a BAM file based on segment coordinates.
 #[pyfunction]
 #[pyo3(signature = (bam, output))]
-fn deduplicate_bam(
-    bam: &str,
-    output: &str,
-) -> PyResult<bam_deduplicate::BamDeduplicationStats> {
+fn deduplicate_bam(bam: &str, output: &str) -> PyResult<bam_deduplicate::BamDeduplicationStats> {
     let res = bam_deduplicate::deduplicate_bam(bam, output);
 
     match res {
@@ -57,21 +52,15 @@ fn deduplicate_bam(
             log::error!("{}", e);
             return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
                 e.to_string(),
-            ))
+            ));
         }
         Ok(stats) => Ok(stats),
     }
 }
 
-
-
 #[pyfunction]
 #[pyo3(signature = (bam, output))]
-fn split_viewpoint_reads(
-    bam: &str,
-    output: &str,
-) -> PyResult<()> {
-
+fn split_viewpoint_reads(bam: &str, output: &str) -> PyResult<()> {
     let splitter_options = viewpoint_read_splitter::ReadSplitterOptions::default();
     let splitter = viewpoint_read_splitter::ReadSplitter::new(bam, splitter_options);
     let res = splitter.split_reads(output);
@@ -81,7 +70,7 @@ fn split_viewpoint_reads(
             log::error!("{}", e);
             return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
                 e.to_string(),
-            ))
+            ));
         }
         Ok(_) => return Ok(()),
     }
@@ -90,7 +79,6 @@ fn split_viewpoint_reads(
 #[pyfunction]
 #[pyo3(signature = (bam, output_directory))]
 fn identify_ligation_junctions(bam: &str, output_directory: &str) -> PyResult<()> {
-
     let res = mcc_data_handler::identify_ligation_junctions(bam, output_directory);
 
     match res {
@@ -98,7 +86,7 @@ fn identify_ligation_junctions(bam: &str, output_directory: &str) -> PyResult<()
             log::error!("{}", e);
             return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
                 e.to_string(),
-            ))
+            ));
         }
         Ok(_) => return Ok(()),
     }
@@ -106,10 +94,7 @@ fn identify_ligation_junctions(bam: &str, output_directory: &str) -> PyResult<()
 
 #[pyfunction]
 #[pyo3(signature = (bam, output))]
-fn annotate_bam(
-    bam: &str,
-    output: &str,
-) -> PyResult<()> {
+fn annotate_bam(bam: &str, output: &str) -> PyResult<()> {
     let res = mcc_data_handler::annotate_bam(bam, output);
 
     match res {
@@ -117,7 +102,7 @@ fn annotate_bam(
             log::error!("{}", e);
             return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
                 e.to_string(),
-            ))
+            ));
         }
         Ok(_) => return Ok(()),
     }
@@ -125,10 +110,7 @@ fn annotate_bam(
 
 #[pyfunction]
 #[pyo3(signature = (bam, stats))]
-fn extract_ligation_stats(
-    bam: &str,
-    stats: &str,
-) -> PyResult<()> {
+fn extract_ligation_stats(bam: &str, stats: &str) -> PyResult<()> {
     let res = ligation_stats::get_ligation_stats(bam, stats);
 
     match res {
@@ -136,20 +118,16 @@ fn extract_ligation_stats(
             log::error!("{}", e);
             return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
                 e.to_string(),
-            ))
+            ));
         }
         Ok(_) => return Ok(()),
     }
 }
 
-
-
-
 /// Rust implementation of MCC code.
 #[pymodule]
 fn mccnado(m: &Bound<'_, PyModule>) -> PyResult<()> {
-
-    pyo3_log::init();    
+    pyo3_log::init();
     let ctrlc_handler = ctrlc::try_set_handler(move || {
         info!("Received SIGINT, exiting...");
         std::process::exit(0);

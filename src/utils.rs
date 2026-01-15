@@ -6,15 +6,17 @@ use flate2;
 use log::{debug, info, warn};
 use noodles::fastq;
 use noodles::fastq::record::Definition;
+use std::collections::HashMap;
 use std::io::{BufRead, Write};
 use std::path::Path;
 use std::path::PathBuf;
-use std::collections::HashMap;
 
 use noodles::core::{Position, Region};
 use noodles::{bam, sam};
 
-pub fn get_fastq_reader<P>(fname: P) -> Result<noodles::fastq::io::Reader<Box<dyn std::io::BufRead>>>
+pub fn get_fastq_reader<P>(
+    fname: P,
+) -> Result<noodles::fastq::io::Reader<Box<dyn std::io::BufRead>>>
 where
     P: AsRef<Path> + Clone,
 {
@@ -54,7 +56,6 @@ where
     Ok(fastq::io::Writer::new(buffer))
 }
 
-
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum FlashedStatus {
     FLASHED = 1,
@@ -79,8 +80,6 @@ impl FlashedStatus {
         }
     }
 }
-
-
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum ReadNumber {
@@ -108,7 +107,6 @@ impl ReadNumber {
         }
     }
 }
-
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Strand {
@@ -226,7 +224,6 @@ impl SegmentMetadata {
     }
 
     pub fn from_read_name(name: Option<&bstr::BStr>) -> Self {
-        
         let name = match name {
             Some(name) => name,
             None => "UNKNOWN".into(),
@@ -235,8 +232,6 @@ impl SegmentMetadata {
         Self {
             name: name.to_str().unwrap().to_string(),
         }
-        
-       
     }
 
     pub fn parent_id(&self) -> &str {
@@ -248,11 +243,19 @@ impl SegmentMetadata {
     }
 
     pub fn oligo_coordinates(&self) -> &str {
-        self.viewpoint().split_once("-").context("No viewpoint coordinate").expect("Error splitting oligo coords").1
+        self.viewpoint()
+            .split_once("-")
+            .context("No viewpoint coordinate")
+            .expect("Error splitting oligo coords")
+            .1
     }
 
     pub fn viewpoint_name(&self) -> &str {
-        self.viewpoint().split_once("-").context("No viewpoint coordinate").expect("Error splitting oligo coords").0
+        self.viewpoint()
+            .split_once("-")
+            .context("No viewpoint coordinate")
+            .expect("Error splitting oligo coords")
+            .0
     }
 
     pub fn viewpoint_position(&self) -> ViewpointPosition {
@@ -295,19 +298,13 @@ impl std::fmt::Debug for SegmentMetadata {
     }
 }
 
-
-
-
-
-
-
 #[derive(Clone, Debug)]
-pub struct Segment<R>{
+pub struct Segment<R> {
     metadata: SegmentMetadata,
     record: R,
 }
 
-impl <R>Segment<R> {
+impl<R> Segment<R> {
     fn new(metadata: SegmentMetadata, record: R) -> Self {
         Self { metadata, record }
     }
@@ -321,22 +318,23 @@ impl <R>Segment<R> {
     }
 }
 
-
-impl Segment <fastq::Record> {
-    pub fn from_metadata(metadata: SegmentMetadata, sequence: &[u8], quality_scores: &[u8]) -> Self {
+impl Segment<fastq::Record> {
+    pub fn from_metadata(
+        metadata: SegmentMetadata,
+        sequence: &[u8],
+        quality_scores: &[u8],
+    ) -> Self {
         let name = metadata.name.as_bytes();
         let record = fastq::Record::new(Definition::new(name, ""), sequence, quality_scores);
         Self { metadata, record }
     }
-
 }
 
-impl Segment <bam::Record> {
+impl Segment<bam::Record> {
     pub fn from_metadata(metadata: SegmentMetadata, record: bam::Record) -> Self {
         Self { metadata, record }
     }
 }
-
 
 #[derive(Debug)]
 pub struct SegmentPositions {
@@ -390,12 +388,16 @@ impl SegmentPositions {
         self.right = right;
     }
 
-    pub fn set_positions(&mut self, viewpoint: (usize, usize), left: (usize, usize), right: (usize, usize)) {
+    pub fn set_positions(
+        &mut self,
+        viewpoint: (usize, usize),
+        left: (usize, usize),
+        right: (usize, usize),
+    ) {
         self.viewpoint = viewpoint;
         self.left = left;
         self.right = right;
     }
-
 }
 
 impl Iterator for SegmentPositions {

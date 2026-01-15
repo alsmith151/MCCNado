@@ -1,15 +1,14 @@
-use std::path::Path;
-use std::io::{Write};
-use std::collections::HashSet;
 use anyhow::Result;
-use noodles::fastq;
-use twox_hash::XxHash64;
 use bstr::ByteSlice;
+use noodles::fastq;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
+use std::collections::HashSet;
+use std::io::Write;
+use std::path::Path;
+use twox_hash::XxHash64;
 
 use crate::utils::{get_fastq_reader, get_fastq_writer};
-
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone, IntoPyObject)]
 pub struct FastqDeduplicationStats {
@@ -56,7 +55,6 @@ impl FastqDeduplicationStats {
 //     }
 // }
 
-
 struct FastqRecord {
     read: fastq::Record,
     read2: Option<fastq::Record>,
@@ -98,7 +96,10 @@ impl<R> DuplicateRemover<R>
 where
     R: std::io::BufRead,
 {
-    fn new(fastq1: noodles::fastq::io::Reader<R>, fastq2: Option<noodles::fastq::io::Reader<R>>) -> Self {
+    fn new(
+        fastq1: noodles::fastq::io::Reader<R>,
+        fastq2: Option<noodles::fastq::io::Reader<R>>,
+    ) -> Self {
         Self {
             fastq1,
             fastq2,
@@ -108,7 +109,6 @@ where
 }
 
 impl DuplicateRemover<Box<dyn std::io::BufRead>> {
-
     pub fn from_fastq_paths<P>(fastq1: P, fastq2: Option<P>) -> Result<Self>
     where
         P: AsRef<Path> + Clone,
@@ -121,7 +121,11 @@ impl DuplicateRemover<Box<dyn std::io::BufRead>> {
         Ok(Self::new(fastq1, fastq2))
     }
 
-    pub fn deduplicate<P>(&mut self, output1: P, output2: Option<P>) -> Result<FastqDeduplicationStats>
+    pub fn deduplicate<P>(
+        &mut self,
+        output1: P,
+        output2: Option<P>,
+    ) -> Result<FastqDeduplicationStats>
     where
         P: AsRef<Path> + Clone,
     {
@@ -132,19 +136,25 @@ impl DuplicateRemover<Box<dyn std::io::BufRead>> {
         };
 
         if let Some(ref mut fastq2_reader) = self.fastq2 {
-            let stats = self.deduplicate_paired(&mut writer1, writer2.as_mut().expect("Paired-end requires two output files"))?;
-            return Ok(stats)
+            let stats = self.deduplicate_paired(
+                &mut writer1,
+                writer2
+                    .as_mut()
+                    .expect("Paired-end requires two output files"),
+            )?;
+            return Ok(stats);
         } else {
             let stats = self.deduplicate_single(&mut writer1)?;
-            return Ok(stats)
+            return Ok(stats);
         }
     }
 
-    fn deduplicate_single(&mut self, writer: &mut fastq::io::Writer<Box<dyn Write>>) -> Result<FastqDeduplicationStats> {
-        
+    fn deduplicate_single(
+        &mut self,
+        writer: &mut fastq::io::Writer<Box<dyn Write>>,
+    ) -> Result<FastqDeduplicationStats> {
         let mut stats = FastqDeduplicationStats::new();
         for (ii, record) in self.fastq1.records().enumerate() {
-
             let record = record?;
             stats.increment_total();
 
@@ -164,7 +174,6 @@ impl DuplicateRemover<Box<dyn std::io::BufRead>> {
         writer1: &mut fastq::io::Writer<Box<dyn Write>>,
         writer2: &mut fastq::io::Writer<Box<dyn Write>>,
     ) -> Result<FastqDeduplicationStats> {
-
         let mut stats = FastqDeduplicationStats::new();
         if let Some(ref mut fastq2_reader) = self.fastq2 {
             for (record1, record2) in self.fastq1.records().zip(fastq2_reader.records()) {
@@ -174,7 +183,7 @@ impl DuplicateRemover<Box<dyn std::io::BufRead>> {
                 let fastq_record = FastqRecord::from_pair(record1, record2);
                 if self.seen.insert(fastq_record.hash) {
                     stats.increment_unique();
-                    
+
                     writer1.write_record(&fastq_record.read)?;
                     if let Some(read2) = fastq_record.read2 {
                         writer2.write_record(&read2)?;

@@ -32,7 +32,10 @@ pub struct MCCReadGroup {
 }
 
 impl MCCReadGroup {
-    pub fn new(reads: Vec<noodles::sam::alignment::RecordBuf>, flashed_status: FlashedStatus) -> Self {
+    pub fn new(
+        reads: Vec<noodles::sam::alignment::RecordBuf>,
+        flashed_status: FlashedStatus,
+    ) -> Self {
         MCCReadGroup {
             reads,
             flashed_status,
@@ -76,7 +79,7 @@ impl MCCReadGroup {
         for read in &self.reads {
             let name = SegmentMetadata::from_read_name(read.name());
             let is_mapped = !read.flags().is_unmapped();
-            
+
             // Fix: Reporter is everything that is NOT the viewpoint oligo (ALL)
             // (e.g., START/RIGHT, END/LEFT, NONE)
             let is_viewpoint = matches!(name.viewpoint_position(), ViewpointPosition::ALL);
@@ -220,14 +223,22 @@ fn get_ligation_positions(
     let capture_end = capture_start + capture.sequence().len();
 
     match (segment, reporter_strand, capture_strand) {
-        (SegmentType::LEFT, Strand::POSITIVE, Strand::POSITIVE) => Ok((reporter_end, capture_start)),
-        (SegmentType::LEFT, Strand::NEGATIVE, Strand::NEGATIVE) => Ok((reporter_start, capture_end)),
+        (SegmentType::LEFT, Strand::POSITIVE, Strand::POSITIVE) => {
+            Ok((reporter_end, capture_start))
+        }
+        (SegmentType::LEFT, Strand::NEGATIVE, Strand::NEGATIVE) => {
+            Ok((reporter_start, capture_end))
+        }
         (SegmentType::LEFT, Strand::POSITIVE, Strand::NEGATIVE) => Ok((reporter_end, capture_end)),
         (SegmentType::LEFT, Strand::NEGATIVE, Strand::POSITIVE) => {
             Ok((reporter_start, capture_start))
         }
-        (SegmentType::RIGHT, Strand::POSITIVE, Strand::POSITIVE) => Ok((reporter_start, capture_end)),
-        (SegmentType::RIGHT, Strand::NEGATIVE, Strand::NEGATIVE) => Ok((reporter_end, capture_start)),
+        (SegmentType::RIGHT, Strand::POSITIVE, Strand::POSITIVE) => {
+            Ok((reporter_start, capture_end))
+        }
+        (SegmentType::RIGHT, Strand::NEGATIVE, Strand::NEGATIVE) => {
+            Ok((reporter_end, capture_start))
+        }
         (SegmentType::RIGHT, Strand::POSITIVE, Strand::NEGATIVE) => {
             Ok((reporter_start, capture_start))
         }
@@ -286,8 +297,7 @@ impl PairsRecord {
         }
     }
 
-
-    pub fn is_valid(&self, chrom1_length: usize, chrom2_length:usize) -> bool {
+    pub fn is_valid(&self, chrom1_length: usize, chrom2_length: usize) -> bool {
         // Check that the positions are within the chromosome lengths
         if self.pos1 > chrom1_length || self.pos2 > chrom2_length {
             return false;
@@ -296,8 +306,6 @@ impl PairsRecord {
         }
         true
     }
-
-
 }
 
 fn write_annotated_records<W>(
@@ -315,9 +323,16 @@ where
     for capture_read in read_group.captures() {
         let mut record = capture_read.clone();
         record.data_mut().insert(tags.reporter, Value::Int8(0));
-        record.data_mut().insert(tags.oligo_coordinate, Value::String(oligo_coordinate.into()));
-        record.data_mut().insert(tags.viewpoint, Value::String(viewpoint_name.into()));
-        record.data_mut().insert(Tag::READ_GROUP, Value::String(viewpoint_name.into()));
+        record.data_mut().insert(
+            tags.oligo_coordinate,
+            Value::String(oligo_coordinate.into()),
+        );
+        record
+            .data_mut()
+            .insert(tags.viewpoint, Value::String(viewpoint_name.into()));
+        record
+            .data_mut()
+            .insert(Tag::READ_GROUP, Value::String(viewpoint_name.into()));
         writer.write_alignment_record(header, &record)?;
     }
 
@@ -325,28 +340,43 @@ where
     for reporter in read_group.reporters() {
         let mut record = reporter.clone();
         record.data_mut().insert(tags.reporter, Value::Int8(1));
-        record.data_mut().insert(tags.oligo_coordinate, Value::String(oligo_coordinate.into()));
-        record.data_mut().insert(tags.viewpoint, Value::String(viewpoint_name.into()));
-        record.data_mut().insert(Tag::READ_GROUP, Value::String(viewpoint_name.into()));
+        record.data_mut().insert(
+            tags.oligo_coordinate,
+            Value::String(oligo_coordinate.into()),
+        );
+        record
+            .data_mut()
+            .insert(tags.viewpoint, Value::String(viewpoint_name.into()));
+        record
+            .data_mut()
+            .insert(Tag::READ_GROUP, Value::String(viewpoint_name.into()));
         writer.write_alignment_record(header, &record)?;
     }
 
     Ok(())
 }
 
-fn finalize_bam_with_read_groups(temp_path: &Path, final_path: &str, read_groups: HashSet<String>) -> Result<()> {
+fn finalize_bam_with_read_groups(
+    temp_path: &Path,
+    final_path: &str,
+    read_groups: HashSet<String>,
+) -> Result<()> {
     let mut bam_in = noodles::bam::io::reader::Builder::default().build_from_path(temp_path)?;
     let mut header = bam_in.read_header()?;
 
     for rg in read_groups {
-        header.read_groups_mut().insert(rg.into(), Map::<ReadGroup>::default());
+        header
+            .read_groups_mut()
+            .insert(rg.into(), Map::<ReadGroup>::default());
     }
 
     let mut bam_out = noodles::bam::io::writer::Builder::default()
         .build_from_path(final_path)
         .context("Could not create output file")?;
 
-    bam_out.write_header(&header).context("Could not write header")?;
+    bam_out
+        .write_header(&header)
+        .context("Could not write header")?;
     std::io::copy(bam_in.get_mut(), bam_out.get_mut())?;
 
     std::fs::remove_file(temp_path).context("Could not remove temporary file")?;
@@ -370,7 +400,11 @@ pub fn annotate_bam(bam_path: &str, out_path: &str) -> Result<()> {
 
     let mcc_groups = reader.records().into_iter().chunk_by(|r| {
         r.as_ref()
-            .map(|record| SegmentMetadata::from_read_name(record.name()).parent_id().to_string())
+            .map(|record| {
+                SegmentMetadata::from_read_name(record.name())
+                    .parent_id()
+                    .to_string()
+            })
             .unwrap_or_else(|_| "UNKNOWN".to_string())
     });
 
@@ -378,7 +412,8 @@ pub fn annotate_bam(bam_path: &str, out_path: &str) -> Result<()> {
         let reads_raw = reads.collect::<Result<Vec<_>, _>>()?;
         let mut reads_buf = Vec::new();
         for r in reads_raw {
-            reads_buf.push(noodles::sam::alignment::RecordBuf::try_from_alignment_record(&header, &r)?);
+            reads_buf
+                .push(noodles::sam::alignment::RecordBuf::try_from_alignment_record(&header, &r)?);
         }
         let read_group = MCCReadGroup::new(reads_buf, FlashedStatus::FLASHED);
 
@@ -386,9 +421,12 @@ pub fn annotate_bam(bam_path: &str, out_path: &str) -> Result<()> {
             let filtered_group = read_group.filter_mapped();
             let first_read = filtered_group.reads.get(0).context("No reads in group")?;
             let metadata = SegmentMetadata::from_read_name(first_read.name());
-            
+
             let viewpoint_full = metadata.viewpoint();
-            let viewpoint_name = viewpoint_full.split_once('-').context("Invalid viewpoint format")?.0;
+            let viewpoint_name = viewpoint_full
+                .split_once('-')
+                .context("Invalid viewpoint format")?
+                .0;
             let oligo_coordinate = metadata.oligo_coordinates();
 
             read_groups_set.insert(viewpoint_name.to_string());
@@ -427,17 +465,22 @@ impl ChromosomeInfo {
             name_to_length.insert(name_str, map.length().into());
         }
 
-        Self { id_to_name, name_to_length }
+        Self {
+            id_to_name,
+            name_to_length,
+        }
     }
 
     fn get_name(&self, id: usize) -> Result<&str> {
-        self.id_to_name.get(&id)
+        self.id_to_name
+            .get(&id)
             .map(|s| s.as_str())
             .ok_or_else(|| anyhow!("Chromosome ID {} not found", id))
     }
 
     fn get_length(&self, name: &str) -> Result<usize> {
-        self.name_to_length.get(name)
+        self.name_to_length
+            .get(name)
             .copied()
             .ok_or_else(|| anyhow!("Chromosome {} length not found", name))
     }
@@ -459,7 +502,8 @@ fn write_pairs_record<W: Write>(
             writer,
             "{}\t{}\t{}\t{}\t{}\t{}\t{}",
             pair.read_id, chrom_1, pair.pos1, chrom_2, pair.pos2, pair.strand1, pair.strand2
-        ).context("Could not write record")?;
+        )
+        .context("Could not write record")?;
     }
 
     Ok(())
@@ -469,12 +513,16 @@ pub fn identify_ligation_junctions(bam_path: &str, output_directory: &str) -> Re
     let mut reader = noodles::bam::io::reader::Builder::default().build_from_path(bam_path)?;
     let header = reader.read_header()?;
     let chrom_info = ChromosomeInfo::from_header(&header);
-    
+
     let mut handles = HashMap::new();
 
     let mcc_groups = reader.records().into_iter().chunk_by(|r| {
         r.as_ref()
-            .map(|record| SegmentMetadata::from_read_name(record.name()).parent_id().to_string())
+            .map(|record| {
+                SegmentMetadata::from_read_name(record.name())
+                    .parent_id()
+                    .to_string()
+            })
             .unwrap_or_else(|_| "UNKNOWN".to_string())
     });
 
@@ -482,7 +530,8 @@ pub fn identify_ligation_junctions(bam_path: &str, output_directory: &str) -> Re
         let reads_raw = reads.collect::<Result<Vec<_>, _>>()?;
         let mut reads_buf = Vec::new();
         for r in reads_raw {
-            reads_buf.push(noodles::sam::alignment::RecordBuf::try_from_alignment_record(&header, &r)?);
+            reads_buf
+                .push(noodles::sam::alignment::RecordBuf::try_from_alignment_record(&header, &r)?);
         }
         let read_group = MCCReadGroup::new(reads_buf, FlashedStatus::FLASHED);
 
@@ -492,7 +541,8 @@ pub fn identify_ligation_junctions(bam_path: &str, output_directory: &str) -> Re
 
             for pair in pairs {
                 let handle = handles.entry(pair.viewpoint_id.clone()).or_insert_with(|| {
-                    let path = Path::new(output_directory).join(format!("{}.pairs", &pair.viewpoint_id));
+                    let path =
+                        Path::new(output_directory).join(format!("{}.pairs", &pair.viewpoint_id));
                     let file = std::fs::File::create(path).expect("Could not create file");
                     std::io::BufWriter::new(file)
                 });
@@ -523,9 +573,9 @@ mod tests {
                 Map::<ReferenceSequence>::new(NonZeroUsize::new(2000).unwrap()),
             )
             .build();
-        
+
         let info = ChromosomeInfo::from_header(&header);
-        
+
         assert_eq!(info.get_name(0).unwrap(), "chr1");
         assert_eq!(info.get_name(1).unwrap(), "chr2");
         assert_eq!(info.get_length("chr1").unwrap(), 1000);

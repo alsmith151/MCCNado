@@ -1,4 +1,5 @@
 use anyhow::Result;
+use bamnado::BamStats;
 use bio::io::fasta::Sequence;
 use bio::utils;
 use bstr::ByteSlice;
@@ -6,20 +7,19 @@ use flate2;
 use log::{info, warn};
 use noodles::fastq;
 use noodles::fastq::record::Definition;
+use noodles::sam::alignment::io::{Read as _, Write as _};
 use noodles::sam::alignment::record::cigar::op::Kind;
 use noodles::sam::header::record::value::map::header;
-use noodles::sam::alignment::io::{Read as _, Write as _};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use serde::de;
 use std::collections::HashSet;
 use std::io::{BufRead, Write};
 use std::path::{Path, PathBuf};
-use bamnado::BamStats;
 
 use crate::utils::{
-    get_fastq_reader, get_fastq_writer, FlashedStatus, ReadNumber, Segment,
-    SegmentMetadata, Strand, ViewpointPosition, SegmentType, SegmentPositions,
+    get_fastq_reader, get_fastq_writer, FlashedStatus, ReadNumber, Segment, SegmentMetadata,
+    SegmentPositions, SegmentType, Strand, ViewpointPosition,
 };
 
 pub struct ViewpointRead<'a> {
@@ -144,14 +144,19 @@ impl<'a> ViewpointRead<'a> {
             return None;
         }
 
-        let sequence: Vec<u8> = self.read.sequence().as_ref()
+        let sequence: Vec<u8> = self
+            .read
+            .sequence()
+            .as_ref()
             .iter()
             .skip(start)
             .take(len)
             .copied()
             .collect();
 
-        let quality: Vec<u8> = self.read.quality_scores()
+        let quality: Vec<u8> = self
+            .read
+            .quality_scores()
             .as_ref()
             .iter()
             .skip(start)
@@ -167,7 +172,9 @@ impl<'a> ViewpointRead<'a> {
             self.flashed_status,
         );
 
-        Some(Segment::<fastq::Record>::from_metadata(metadata, &sequence, &quality))
+        Some(Segment::<fastq::Record>::from_metadata(
+            metadata, &sequence, &quality,
+        ))
     }
 
     fn segments(&self) -> Option<Result<Vec<Segment<fastq::Record>>>> {
@@ -192,15 +199,15 @@ impl<'a> ViewpointRead<'a> {
 mod tests {
     use super::*;
     use noodles::bam;
-    use noodles::sam::alignment::record::cigar::Op;
     use noodles::sam::alignment::record::cigar::op::Kind;
+    use noodles::sam::alignment::record::cigar::Op;
 
     #[test]
     fn test_parse_segment_positions() {
-        use noodles::sam::alignment::record_buf::{Sequence, Cigar};
-        use noodles::sam::alignment::RecordBuf;
-        use noodles::sam::alignment::record::cigar::Op;
         use noodles::sam::alignment::record::cigar::op::Kind;
+        use noodles::sam::alignment::record::cigar::Op;
+        use noodles::sam::alignment::record_buf::{Cigar, Sequence};
+        use noodles::sam::alignment::RecordBuf;
 
         // Construct a read with: 10S (Left) 50M (Viewpoint) 20S (Right)
         let cigar = Cigar::from(vec![
@@ -208,21 +215,21 @@ mod tests {
             Op::new(Kind::Match, 50),
             Op::new(Kind::SoftClip, 20),
         ]);
-        
+
         let read = RecordBuf::builder()
             .set_cigar(cigar)
             .set_sequence(Sequence::from(vec![b'A'; 80]))
             .build();
-            
+
         let viewpoint_read = ViewpointRead {
             viewpoint: "test-vp",
             read,
             flashed_status: FlashedStatus::FLASHED,
             minimum_segment_length: 5,
         };
-        
+
         let positions = viewpoint_read.parse_segment_positions().unwrap();
-        
+
         assert_eq!(positions.left(), (0, 10));
         assert_eq!(positions.viewpoint(), (10, 60));
         assert_eq!(positions.right(), (60, 80));
@@ -281,7 +288,8 @@ impl ReadSplitter {
 
     pub fn split_reads(&self, outfile: &str) -> Result<()> {
         let mut reader = noodles::bam::io::indexed_reader::Builder::default()
-            .build_from_path(self.bam_path.clone()).expect("Failed to build indexed reader");
+            .build_from_path(self.bam_path.clone())
+            .expect("Failed to build indexed reader");
         let mut writer = get_fastq_writer(outfile).expect("Failed to create fastq writer");
 
         let header = self.header()?;
@@ -300,15 +308,22 @@ impl ReadSplitter {
 
         let mut counter = 0;
         for region in query_regions {
-            let query = reader.query(&header, &region).expect("Failed to query region");
+            let query = reader
+                .query(&header, &region)
+                .expect("Failed to query region");
             for result in query.records() {
-                let record = result.and_then(|r| noodles::bam::Record::try_from(r).map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e)))?;
+                let record = result.and_then(|r| {
+                    noodles::bam::Record::try_from(r)
+                        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
+                })?;
                 counter += 1;
                 if counter % 100_000 == 0 {
                     info!("Processed {} reads", counter);
                 }
 
-                let record_buf = noodles::sam::alignment::RecordBuf::try_from_alignment_record(&header, &record)?;
+                let record_buf = noodles::sam::alignment::RecordBuf::try_from_alignment_record(
+                    &header, &record,
+                )?;
                 let viewpoint_read = ViewpointRead::new(
                     region.name().to_str().unwrap(),
                     record_buf,
@@ -323,7 +338,6 @@ impl ReadSplitter {
                 }
             }
         }
-
 
         Ok(())
     }

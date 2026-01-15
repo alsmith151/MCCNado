@@ -39,7 +39,10 @@ impl LigationTags {
     }
 }
 
-fn extract_tag_string(record_data: &noodles::sam::alignment::record_buf::Data, tag: Tag) -> Option<String> {
+fn extract_tag_string(
+    record_data: &noodles::sam::alignment::record_buf::Data,
+    tag: Tag,
+) -> Option<String> {
     match record_data.get(&tag) {
         Some(Value::String(s)) => Some(s.to_string()),
         _ => None,
@@ -58,7 +61,9 @@ fn write_stats_json(output_path: &str, stats: &HashMap<String, LigationStats>) -
     let file = std::fs::File::create(output_path).context("Failed to create output file")?;
     let mut writer = BufWriter::new(file);
     let json = serde_json::to_string(stats).context("Failed to serialize ligation stats")?;
-    writer.write_all(json.as_bytes()).context("Failed to write ligation stats to file")?;
+    writer
+        .write_all(json.as_bytes())
+        .context("Failed to write ligation stats to file")?;
     Ok(())
 }
 
@@ -77,7 +82,9 @@ pub fn get_ligation_stats(bam_path: &str, output_path: &str) -> Result<()> {
     let tags = LigationTags::new();
 
     for record in reader.records() {
-        let record = noodles::sam::alignment::record_buf::RecordBuf::try_from_alignment_record(&header, &record?)?;
+        let record = noodles::sam::alignment::record_buf::RecordBuf::try_from_alignment_record(
+            &header, &record?,
+        )?;
         let data = record.data();
 
         if !is_reporter_read(data, tags.reporter) {
@@ -85,15 +92,25 @@ pub fn get_ligation_stats(bam_path: &str, output_path: &str) -> Result<()> {
         }
 
         let viewpoint_name = extract_tag_string(data, tags.viewpoint).context("Missing VP tag")?;
-        let oligo_coordinate = extract_tag_string(data, tags.oligo_coordinate).context("Missing OC tag")?;
+        let oligo_coordinate =
+            extract_tag_string(data, tags.oligo_coordinate).context("Missing OC tag")?;
 
-        let entry = ligation_stats.entry(viewpoint_name).or_insert_with(LigationStats::new);
+        let entry = ligation_stats
+            .entry(viewpoint_name)
+            .or_insert_with(LigationStats::new);
         entry.n_total += 1;
 
-        let chrom_read_id = record.reference_sequence_id().context("Missing reference sequence ID")?;
-        let chrom_read = refid_to_name.get(&chrom_read_id).context("Could not get chromosome name")?;
+        let chrom_read_id = record
+            .reference_sequence_id()
+            .context("Missing reference sequence ID")?;
+        let chrom_read = refid_to_name
+            .get(&chrom_read_id)
+            .context("Could not get chromosome name")?;
 
-        let chrom_viewpoint = oligo_coordinate.split_once('-').context("Could not split oligo coordinate")?.0;
+        let chrom_viewpoint = oligo_coordinate
+            .split_once('-')
+            .context("Could not split oligo coordinate")?
+            .0;
 
         if chrom_read == chrom_viewpoint {
             entry.n_cis += 1;
