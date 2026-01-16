@@ -184,9 +184,9 @@ def deduplicate_fastq(
     
     # Print deduplication summary
     print("Deduplication summary:")
-    print(f"  Total reads:     {stats.total_reads}")
-    print(f"  Unique reads:    {stats.unique_reads}")
-    print(f"  Duplicate reads: {stats.duplicate_reads}")
+    print(f"  Total reads:     {stats['total_reads']}")
+    print(f"  Unique reads:    {stats['unique_reads']}")
+    print(f"  Duplicate reads: {stats['duplicate_reads']}")
 
 
 def main():
