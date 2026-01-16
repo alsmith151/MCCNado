@@ -11,6 +11,6 @@ try:
 except Exception:
     # Fallback version if package metadata is not available
     # This should match the version in Cargo.toml
-    __version__ = "0.1.5"
+    __version__ = "0.1.6"
 
 __all__ = ["__version__"]
