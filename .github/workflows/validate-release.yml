@@ -1,0 +1,75 @@
+name: Validate Release Version
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  validate_version:
+    name: Validate version matches tag
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract tag version
+        id: tag
+        run: |
+          TAG=${{ github.ref }}
+          VERSION=${TAG#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Tag version: $VERSION"
+
+      - name: Get Cargo.toml version
+        id: cargo
+        run: |
+          VERSION=$(grep '^version' Cargo.toml | sed 's/version = "\([^"]*\)".*/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Cargo.toml version: $VERSION"
+
+      - name: Compare versions
+        run: |
+          TAG_VERSION=${{ steps.tag.outputs.version }}
+          CARGO_VERSION=${{ steps.cargo.outputs.version }}
+          if [ "$TAG_VERSION" = "$CARGO_VERSION" ]; then
+            echo "✓ Version match: $TAG_VERSION"
+          else
+            echo "✗ Version mismatch!"
+            echo "  Tag version: $TAG_VERSION"
+            echo "  Cargo.toml version: $CARGO_VERSION"
+            exit 1
+          fi
+
+  build_and_test:
+    name: Build and test
+    runs-on: ubuntu-latest
+    needs: validate_version
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install dependencies
+        run: |
+          pip install maturin pytest pysam
+
+      - name: Build package
+        run: maturin develop
+
+      - name: Run tests
+        run: pytest python/tests/ -v
+
+      - name: Check version consistency
+        run: |
+          python -c "import mccnado; print(f'Package version: {mccnado.__version__}')"
