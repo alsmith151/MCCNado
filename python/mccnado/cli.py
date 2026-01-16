@@ -1,10 +1,32 @@
 import typer
 import pathlib
-from typing import List
+from typing import List, Optional
 
 import mccnado
+from mccnado.version import __version__
 
 app = typer.Typer()
+
+
+def version_callback(value: bool):
+    """Callback for --version flag."""
+    if value:
+        print(f"mccnado {__version__}")
+        raise typer.Exit()
+
+
+@app.callback()
+def main_callback(
+    version: Optional[bool] = typer.Option(
+        None,
+        "--version",
+        callback=version_callback,
+        is_eager=True,
+        help="Show version and exit",
+    ),
+):
+    """MCCNado: Rust-based tools for processing Micro-Capture-C data."""
+    pass
 
 
 def check_bam_sorted_by_queryname(bam_path: str):

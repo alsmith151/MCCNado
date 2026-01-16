@@ -1,4 +1,5 @@
 from .mccnado import *
+from .version import __version__
 
 
 __doc__ = mccnado.__doc__
