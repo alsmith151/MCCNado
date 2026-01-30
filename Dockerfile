@@ -29,6 +29,10 @@ WORKDIR /app
 
 # Install runtime dependencies if needed (e.g. procps for monitoring, though minimal is better)
 # MCCNado deps are handled by pip
+# Install samtools for runtime use
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    samtools \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy the built wheel from builder
 COPY --from=builder /build/target/wheels /build/wheels
